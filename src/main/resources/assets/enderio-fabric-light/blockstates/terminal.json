@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "enderio-fabric-light:block/terminal" },
+    "facing=east":  { "model": "enderio-fabric-light:block/terminal", "y": 90 },
+    "facing=south": { "model": "enderio-fabric-light:block/terminal", "y": 180 },
+    "facing=west":  { "model": "enderio-fabric-light:block/terminal", "y": 270 }
+  }
+}

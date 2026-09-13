@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "enderio-fabric-light:block/terminal_top",
+    "front": "enderio-fabric-light:block/terminal_front",
+    "side": "enderio-fabric-light:block/terminal_side"
+  }
+}

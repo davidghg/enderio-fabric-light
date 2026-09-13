@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:glass",
+    "E": "minecraft:ender_pearl",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    "III",
+    "GEG",
+    "IRI"
+  ],
+  "result": {
+    "id": "enderio-fabric-light:terminal"
+  }
+}

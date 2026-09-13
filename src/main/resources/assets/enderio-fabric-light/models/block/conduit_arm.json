@@ -1,0 +1,20 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "core": "enderio-fabric-light:block/conduit",
+    "particle": "enderio-fabric-light:block/conduit"
+  },
+  "elements": [
+    {
+      "from": [5, 5, 0],
+      "to": [11, 11, 5],
+      "faces": {
+        "north": { "uv": [5, 5, 11, 11], "texture": "#core" },
+        "east":  { "uv": [0, 5, 5, 11],  "texture": "#core" },
+        "west":  { "uv": [0, 5, 5, 11],  "texture": "#core" },
+        "up":    { "uv": [5, 0, 11, 5],  "texture": "#core" },
+        "down":  { "uv": [5, 0, 11, 5],  "texture": "#core" }
+      }
+    }
+  ]
+}

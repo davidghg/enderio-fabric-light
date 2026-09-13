@@ -1,0 +1,11 @@
+{
+  "block.enderio-fabric-light.terminal": "Terminal",
+  "block.enderio-fabric-light.conduit": "Conduit",
+  "container.enderio-fabric-light.terminal": "Terminal",
+  "gui.enderio-fabric-light.crafting": "Crafting-Gitter",
+  "gui.enderio-fabric-light.return": "Rückgabe-Bereich",
+  "gui.enderio-fabric-light.search": "Suche…",
+  "gui.enderio-fabric-light.sort": "%s",
+  "itemGroup.enderio-fabric-light.main": "EnderIO Fabric light",
+  "tooltip.enderio-fabric-light.total": "Gesamt: %s"
+}

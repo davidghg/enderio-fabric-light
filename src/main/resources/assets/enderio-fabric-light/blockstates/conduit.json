@@ -1,0 +1,11 @@
+{
+  "multipart": [
+    { "apply": { "model": "enderio-fabric-light:block/conduit" } },
+    { "when": { "north": "true" }, "apply": { "model": "enderio-fabric-light:block/conduit_arm" } },
+    { "when": { "east": "true" },  "apply": { "model": "enderio-fabric-light:block/conduit_arm", "y": 90 } },
+    { "when": { "south": "true" }, "apply": { "model": "enderio-fabric-light:block/conduit_arm", "y": 180 } },
+    { "when": { "west": "true" },  "apply": { "model": "enderio-fabric-light:block/conduit_arm", "y": 270 } },
+    { "when": { "up": "true" },    "apply": { "model": "enderio-fabric-light:block/conduit_arm", "x": 270 } },
+    { "when": { "down": "true" },  "apply": { "model": "enderio-fabric-light:block/conduit_arm", "x": 90 } }
+  ]
+}
