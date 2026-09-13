@@ -1,6 +1,7 @@
 {
   "block.enderio-fabric-light.terminal": "Terminal",
   "block.enderio-fabric-light.conduit": "Conduit",
+  "item.enderio-fabric-light.wrench": "Conduit Wrench",
   "container.enderio-fabric-light.terminal": "Terminal",
   "gui.enderio-fabric-light.search": "Search…",
   "gui.enderio-fabric-light.sort.name": "Sort: Name",

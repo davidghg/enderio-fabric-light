@@ -128,21 +128,58 @@ public class ConduitBlock extends Block implements EntityBlock {
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess tickAccess,
                                      BlockPos pos, Direction direction, BlockPos neighborPos,
                                      BlockState neighborState, RandomSource random) {
-        return state.setValue(PROPERTY_BY_DIRECTION.get(direction),
-            connectionTo(level, neighborPos, neighborState, direction));
+        EnumProperty<ConduitConnection> prop = PROPERTY_BY_DIRECTION.get(direction);
+        if (state.getValue(prop) == ConduitConnection.DISABLED) return state;
+        return state.setValue(prop, connectionTo(level, neighborPos, neighborState, direction));
     }
 
     /**
      * {@code dir} points from this conduit to the neighbour. A terminal's back faces us exactly when
-     * its screen faces the same way.
+     * its screen faces the same way. A neighbouring conduit that disabled its side toward us counts
+     * as no connection, so both ends of a link always agree.
      */
     private static ConduitConnection connectionTo(LevelReader level, BlockPos neighborPos, BlockState neighborState, Direction dir) {
-        if (neighborState.is(ModBlocks.CONDUIT)) return ConduitConnection.PIPE;
+        if (neighborState.is(ModBlocks.CONDUIT)) {
+            return neighborState.getValue(PROPERTY_BY_DIRECTION.get(dir.getOpposite())) == ConduitConnection.DISABLED
+                ? ConduitConnection.NONE : ConduitConnection.PIPE;
+        }
         if (neighborState.is(ModBlocks.TERMINAL)) {
             return neighborState.getValue(TerminalBlock.FACING) == dir ? ConduitConnection.PLUG : ConduitConnection.NONE;
         }
         BlockEntity be = level.getBlockEntity(neighborPos);
         return be != null && InventorySource.isAllowedInventory(be) ? ConduitConnection.PLUG : ConduitConnection.NONE;
+    }
+
+    /**
+     * Wrench action on side {@code dir}: re-enables a disabled side (ours, or the neighbouring
+     * conduit's side facing us), otherwise disables an active connection. Server side only.
+     *
+     * @return whether anything changed
+     */
+    public static boolean toggleSide(Level level, BlockPos pos, BlockState state, Direction dir) {
+        EnumProperty<ConduitConnection> prop = PROPERTY_BY_DIRECTION.get(dir);
+        ConduitConnection current = state.getValue(prop);
+        BlockPos neighborPos = pos.relative(dir);
+        BlockState neighbor = level.getBlockState(neighborPos);
+
+        if (current == ConduitConnection.DISABLED) {
+            level.setBlock(pos, state.setValue(prop, connectionTo(level, neighborPos, neighbor, dir)), UPDATE_ALL);
+            return true;
+        }
+        if (neighbor.is(ModBlocks.CONDUIT)) {
+            EnumProperty<ConduitConnection> neighborProp = PROPERTY_BY_DIRECTION.get(dir.getOpposite());
+            if (neighbor.getValue(neighborProp) == ConduitConnection.DISABLED) {
+                level.setBlock(neighborPos,
+                    neighbor.setValue(neighborProp, connectionTo(level, pos, state, dir.getOpposite())), UPDATE_ALL);
+                return true;
+            }
+        }
+        if (current.isConnected()) {
+            // The neighbouring conduit (if any) drops its side to NONE through its own updateShape.
+            level.setBlock(pos, state.setValue(prop, ConduitConnection.DISABLED), UPDATE_ALL);
+            return true;
+        }
+        return false;
     }
 
     @Override

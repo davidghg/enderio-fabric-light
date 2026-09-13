@@ -3,6 +3,7 @@ package de.daveos.enderiofabriclight;
 import de.daveos.enderiofabriclight.block.ModBlocks;
 import de.daveos.enderiofabriclight.blockentity.ModBlockEntities;
 import de.daveos.enderiofabriclight.item.ModItemGroups;
+import de.daveos.enderiofabriclight.item.ModItems;
 import de.daveos.enderiofabriclight.menu.ModMenus;
 import de.daveos.enderiofabriclight.network.ModNetworking;
 import net.fabricmc.api.ModInitializer;
@@ -18,6 +19,7 @@ public class EnderIOFabricLight implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModBlocks.init();
+		ModItems.init();
 		ModBlockEntities.init();
 		ModMenus.init();
 		ModNetworking.init();

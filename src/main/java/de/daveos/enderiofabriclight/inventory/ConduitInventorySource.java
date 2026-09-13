@@ -1,5 +1,7 @@
 package de.daveos.enderiofabriclight.inventory;
 
+import de.daveos.enderiofabriclight.block.ConduitBlock;
+import de.daveos.enderiofabriclight.block.ConduitConnection;
 import de.daveos.enderiofabriclight.block.ModBlocks;
 import de.daveos.enderiofabriclight.block.TerminalBlock;
 import net.minecraft.core.BlockPos;
@@ -59,33 +61,43 @@ public class ConduitInventorySource implements InventorySource {
         Set<BlockPos> seen = new HashSet<>();
         seen.add(terminalPos);
 
-        if (!level.getBlockState(back).is(ModBlocks.CONDUIT)) {
+        BlockState backState = level.getBlockState(back);
+        if (!backState.is(ModBlocks.CONDUIT)) {
             collectAt(level, back, seen, result);
             cached = List.copyOf(result);
             return;
         }
+        // The conduit's side toward the terminal may have been switched off with the wrench.
+        Direction towardTerminal = terminalState.getValue(TerminalBlock.FACING);
+        if (backState.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(towardTerminal)) != ConduitConnection.PLUG) {
+            cached = List.of();
+            return;
+        }
 
-        // 1. Flood-fill the conduit network reachable from the conduit behind the panel.
+        // Flood-fill along active connections only: PIPE sides lead to more conduits, PLUG sides to
+        // storage. Disabled sides are skipped, which is how the wrench splits networks.
         Set<BlockPos> conduits = new HashSet<>();
+        List<BlockPos> plugs = new ArrayList<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
         conduits.add(back);
         queue.add(back);
-        while (!queue.isEmpty() && conduits.size() < MAX_NODES) {
+        while (!queue.isEmpty()) {
             BlockPos c = queue.poll();
+            BlockState cs = level.getBlockState(c);
+            if (!cs.is(ModBlocks.CONDUIT)) continue;
             for (Direction dir : Direction.values()) {
+                ConduitConnection side = cs.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(dir));
                 BlockPos n = c.relative(dir);
-                if (level.getBlockState(n).is(ModBlocks.CONDUIT) && conduits.add(n)) {
+                if (side == ConduitConnection.PIPE && conduits.size() < MAX_NODES && conduits.add(n)) {
                     queue.add(n);
+                } else if (side == ConduitConnection.PLUG) {
+                    plugs.add(n);
                 }
             }
         }
 
-        // 2. Collect containers adjacent to any network conduit.
-        seen.addAll(conduits);
-        for (BlockPos c : conduits) {
-            for (Direction dir : Direction.values()) {
-                collectAt(level, c.relative(dir), seen, result);
-            }
+        for (BlockPos p : plugs) {
+            collectAt(level, p, seen, result);
         }
 
         cached = List.copyOf(result);

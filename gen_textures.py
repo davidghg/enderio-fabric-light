@@ -92,8 +92,57 @@ def terminal_side():
     png(os.path.join(OUT, "terminal_side.png"), px)
 
 
+# --- Wrench item: diagonal open-end wrench, graphite with a teal grip -------
+def wrench():
+    import math
+    outline = (24, 27, 32, 255)
+    metal_hi = (196, 204, 214, 255)
+    metal = (150, 158, 170, 255)
+    metal_lo = (104, 111, 122, 255)
+    grip = (44, 184, 192, 255)
+    grip_lo = (26, 118, 124, 255)
+
+    def seg_dist(px_, py_, ax, ay, bx, by):
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, ((px_ - ax) * dx + (py_ - ay) * dy) / (dx * dx + dy * dy)))
+        return math.hypot(px_ - (ax + t * dx), py_ - (ay + t * dy))
+
+    fill = {}
+    for y in range(H):
+        for x in range(W):
+            cx, cy = x + 0.5, y + 0.5
+            # Across the handle: negative = upper-left edge (lit), positive = lower-right (shaded).
+            across = ((cx - 2.5) + (cy - 13.5)) / math.sqrt(2)
+            if seg_dist(cx, cy, 2.5, 13.5, 9.5, 6.5) < 1.25:
+                is_grip = cx < 6.5
+                if is_grip:
+                    fill[(x, y)] = grip if across < 0.4 else grip_lo
+                else:
+                    fill[(x, y)] = metal_hi if across < -0.3 else metal if across < 0.5 else metal_lo
+            # Open-end head: a disc around (11.5, 4.5) with a straight slot cut in toward the top-right.
+            dxj, dyj = cx - 11.5, cy - 4.5
+            along = (dxj - dyj) / math.sqrt(2)
+            perp = (dxj + dyj) / math.sqrt(2)
+            if math.hypot(dxj, dyj) < 3.4 and not (abs(perp) < 1.0 and along > -0.8):
+                fill[(x, y)] = metal_hi if perp < 0 else metal
+
+    px = grid((0, 0, 0, 0))
+    for (x, y), c in fill.items():
+        px[y][x] = c
+    for y in range(H):
+        for x in range(W):
+            if (x, y) in fill:
+                continue
+            if any((x + ox, y + oy) in fill for ox, oy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                px[y][x] = outline
+    out = os.path.join(os.path.dirname(OUT), "item")
+    os.makedirs(out, exist_ok=True)
+    png(os.path.join(out, "wrench.png"), px)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     terminal_front()
     terminal_side()
+    wrench()
     print("done")

@@ -280,6 +280,7 @@ def models():
 
 def blockstate():
     connected = "pipe|plug"
+    unconnected = "none|disabled"
     hub_when = []
     axes = [("north", "south"), ("west", "east"), ("down", "up")]
     # Bends and junctions: connections on two different axes.
@@ -289,14 +290,14 @@ def blockstate():
                 for b in axes[j]:
                     hub_when.append({a: connected, b: connected})
     # Dead ends and lone conduits.
-    hub_when.append({d: "none" for d in DIRS})
+    hub_when.append({d: unconnected for d in DIRS})
     for d in DIRS:
-        hub_when.append({x: (connected if x == d else "none") for x in DIRS})
+        hub_when.append({x: (connected if x == d else unconnected) for x in DIRS})
 
     parts = [{"when": {"OR": hub_when}, "apply": {"model": f"{NS}:block/conduit/hub"}}]
     for d in DIRS:
-        for kind in ("none", "pipe", "plug"):
-            parts.append({"when": {d: kind}, "apply": {"model": f"{NS}:block/conduit/{kind}_{d}"}})
+        for kind, when in (("none", unconnected), ("pipe", "pipe"), ("plug", "plug")):
+            parts.append({"when": {d: when}, "apply": {"model": f"{NS}:block/conduit/{kind}_{d}"}})
     with open(os.path.join(ROOT, "blockstates", "conduit.json"), "w") as f:
         json.dump({"multipart": parts}, f, indent=2)
 

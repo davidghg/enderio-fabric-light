@@ -8,7 +8,9 @@ public enum ConduitConnection implements StringRepresentable {
     /** Another conduit: plain tube with a coupling ring. */
     PIPE("pipe"),
     /** Storage block or terminal: tube ending in a connector plate. */
-    PLUG("plug");
+    PLUG("plug"),
+    /** Switched off with the wrench; survives neighbour updates until switched on again. */
+    DISABLED("disabled");
 
     private final String name;
 
@@ -17,7 +19,7 @@ public enum ConduitConnection implements StringRepresentable {
     }
 
     public boolean isConnected() {
-        return this != NONE;
+        return this == PIPE || this == PLUG;
     }
 
     @Override

@@ -52,59 +52,59 @@
             "up": "pipe|plug"
           },
           {
-            "north": "none",
-            "south": "none",
-            "west": "none",
-            "east": "none",
-            "down": "none",
-            "up": "none"
+            "north": "none|disabled",
+            "south": "none|disabled",
+            "west": "none|disabled",
+            "east": "none|disabled",
+            "down": "none|disabled",
+            "up": "none|disabled"
           },
           {
             "north": "pipe|plug",
-            "south": "none",
-            "west": "none",
-            "east": "none",
-            "down": "none",
-            "up": "none"
+            "south": "none|disabled",
+            "west": "none|disabled",
+            "east": "none|disabled",
+            "down": "none|disabled",
+            "up": "none|disabled"
           },
           {
-            "north": "none",
+            "north": "none|disabled",
             "south": "pipe|plug",
-            "west": "none",
-            "east": "none",
-            "down": "none",
-            "up": "none"
+            "west": "none|disabled",
+            "east": "none|disabled",
+            "down": "none|disabled",
+            "up": "none|disabled"
           },
           {
-            "north": "none",
-            "south": "none",
+            "north": "none|disabled",
+            "south": "none|disabled",
             "west": "pipe|plug",
-            "east": "none",
-            "down": "none",
-            "up": "none"
+            "east": "none|disabled",
+            "down": "none|disabled",
+            "up": "none|disabled"
           },
           {
-            "north": "none",
-            "south": "none",
-            "west": "none",
+            "north": "none|disabled",
+            "south": "none|disabled",
+            "west": "none|disabled",
             "east": "pipe|plug",
-            "down": "none",
-            "up": "none"
+            "down": "none|disabled",
+            "up": "none|disabled"
           },
           {
-            "north": "none",
-            "south": "none",
-            "west": "none",
-            "east": "none",
+            "north": "none|disabled",
+            "south": "none|disabled",
+            "west": "none|disabled",
+            "east": "none|disabled",
             "down": "pipe|plug",
-            "up": "none"
+            "up": "none|disabled"
           },
           {
-            "north": "none",
-            "south": "none",
-            "west": "none",
-            "east": "none",
-            "down": "none",
+            "north": "none|disabled",
+            "south": "none|disabled",
+            "west": "none|disabled",
+            "east": "none|disabled",
+            "down": "none|disabled",
             "up": "pipe|plug"
           }
         ]
@@ -115,7 +115,7 @@
     },
     {
       "when": {
-        "north": "none"
+        "north": "none|disabled"
       },
       "apply": {
         "model": "enderio-fabric-light:block/conduit/none_north"
@@ -139,7 +139,7 @@
     },
     {
       "when": {
-        "south": "none"
+        "south": "none|disabled"
       },
       "apply": {
         "model": "enderio-fabric-light:block/conduit/none_south"
@@ -163,7 +163,7 @@
     },
     {
       "when": {
-        "west": "none"
+        "west": "none|disabled"
       },
       "apply": {
         "model": "enderio-fabric-light:block/conduit/none_west"
@@ -187,7 +187,7 @@
     },
     {
       "when": {
-        "east": "none"
+        "east": "none|disabled"
       },
       "apply": {
         "model": "enderio-fabric-light:block/conduit/none_east"
@@ -211,7 +211,7 @@
     },
     {
       "when": {
-        "down": "none"
+        "down": "none|disabled"
       },
       "apply": {
         "model": "enderio-fabric-light:block/conduit/none_down"
@@ -235,7 +235,7 @@
     },
     {
       "when": {
-        "up": "none"
+        "up": "none|disabled"
       },
       "apply": {
         "model": "enderio-fabric-light:block/conduit/none_up"
