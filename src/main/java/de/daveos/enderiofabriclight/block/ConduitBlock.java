@@ -59,7 +59,7 @@ public class ConduitBlock extends PipeBlock implements EntityBlock {
         for (Direction dir : Direction.values()) {
             BlockPos neighbor = pos.relative(dir);
             state = state.setValue(PROPERTY_BY_DIRECTION.get(dir),
-                canConnect(level, neighbor, level.getBlockState(neighbor)));
+                canConnect(level, neighbor, level.getBlockState(neighbor), dir));
         }
         return state;
     }
@@ -70,13 +70,17 @@ public class ConduitBlock extends PipeBlock implements EntityBlock {
                                      BlockState neighborState, RandomSource random) {
         // Only the connection toward `direction` can change from a single neighbour update.
         return state.setValue(PROPERTY_BY_DIRECTION.get(direction),
-            canConnect(level, neighborPos, neighborState));
+            canConnect(level, neighborPos, neighborState, direction));
     }
 
-    /** A conduit connects to other conduits, the terminal, and allowed storage blocks. */
-    private static boolean canConnect(LevelReader level, BlockPos neighborPos, BlockState neighborState) {
+    /**
+     * A conduit connects to other conduits, allowed storage blocks, and a terminal whose back faces
+     * it. {@code dir} points from this conduit to the neighbour; the terminal's back faces us exactly
+     * when its screen faces the same way.
+     */
+    private static boolean canConnect(LevelReader level, BlockPos neighborPos, BlockState neighborState, Direction dir) {
         if (neighborState.is(ModBlocks.CONDUIT)) return true;
-        if (neighborState.is(ModBlocks.TERMINAL)) return true;
+        if (neighborState.is(ModBlocks.TERMINAL)) return neighborState.getValue(TerminalBlock.FACING) == dir;
         BlockEntity be = level.getBlockEntity(neighborPos);
         return be != null && InventorySource.isAllowedInventory(be);
     }

@@ -3,15 +3,19 @@ package de.daveos.enderiofabriclight.block;
 import com.mojang.serialization.MapCodec;
 import de.daveos.enderiofabriclight.blockentity.ModBlockEntities;
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
+import de.daveos.enderiofabriclight.inventory.InventorySource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.Containers;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -62,7 +66,33 @@ public class TerminalBlock extends DirectionalBlock implements EntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         // Mount on the clicked face, screen pointing back at the player.
-        return this.defaultBlockState().setValue(FACING, context.getClickedFace());
+        BlockState state = this.defaultBlockState().setValue(FACING, context.getClickedFace());
+        return canSurvive(state, context.getLevel(), context.getClickedPos()) ? state : null;
+    }
+
+    /**
+     * Needs something to hang on: a sturdy face, a conduit, or a storage block (chests aren't
+     * sturdy, but mounting a panel directly on one is a natural setup).
+     */
+    @Override
+    protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+        Direction facing = state.getValue(FACING);
+        BlockPos backPos = pos.relative(facing.getOpposite());
+        BlockState back = level.getBlockState(backPos);
+        return back.isFaceSturdy(level, backPos, facing)
+            || back.is(ModBlocks.CONDUIT)
+            || back.is(InventorySource.STORAGE);
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess tickAccess,
+                                     BlockPos pos, Direction direction, BlockPos neighborPos,
+                                     BlockState neighborState, RandomSource random) {
+        // Pop off (with drops) like a torch when the supporting block goes away.
+        if (direction == state.getValue(FACING).getOpposite() && !canSurvive(state, level, pos)) {
+            return Blocks.AIR.defaultBlockState();
+        }
+        return state;
     }
 
     @Override
@@ -105,20 +135,5 @@ public class TerminalBlock extends DirectionalBlock implements EntityBlock {
             player.openMenu(terminal);
         }
         return InteractionResult.SUCCESS;
-    }
-
-    // --- Drop buffered items on removal --------------------------------------
-
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        // Fires BEFORE the block (and its block entity) is removed, so the return-area buffer is
-        // still readable. affectNeighborsAfterRemoval (the 26.1 onRemove successor) runs too late
-        // here — by then the BE is already gone, which is why the items weren't dropping.
-        // The crafting grid lives in the menu and is returned to the player on GUI close, so it
-        // needs no handling here.
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal) {
-            Containers.dropContents(level, pos, terminal.getReturnArea());
-        }
-        return super.playerWillDestroy(level, pos, state, player);
     }
 }

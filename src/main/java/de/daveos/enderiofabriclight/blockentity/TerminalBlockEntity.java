@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.Containers;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -117,6 +118,7 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
                 ItemStack existing = target.getItem(s);
                 if (existing.isEmpty()) continue;
                 if (!ItemStack.isSameItemSameComponents(existing, stack)) continue;
+                if (!target.canPlaceItem(s, stack)) continue;
                 int cap = Math.min(existing.getMaxStackSize(), target.getMaxStackSize());
                 int room = cap - existing.getCount();
                 if (room <= 0) continue;
@@ -132,6 +134,8 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
             for (int s = 0; s < target.getContainerSize(); s++) {
                 if (stack.isEmpty()) return stack;
                 if (!target.getItem(s).isEmpty()) continue;
+                // Respects container rules, e.g. shulker boxes refuse other shulker boxes.
+                if (!target.canPlaceItem(s, stack)) continue;
                 int cap = Math.min(stack.getMaxStackSize(), target.getMaxStackSize());
                 int move = Math.min(cap, stack.getCount());
                 target.setItem(s, stack.copyWithCount(move));
@@ -148,6 +152,18 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
 
     public SimpleContainer getReturnArea() {
         return returnArea;
+    }
+
+    /**
+     * Runs before the block is replaced by any means (player, panel popping off, explosion), while
+     * the buffer is still readable. The crafting grid lives in the menu and is returned on close.
+     */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        if (this.level != null && !this.level.isClientSide()) {
+            Containers.dropContents(this.level, pos, returnArea);
+        }
+        super.preRemoveSideEffects(pos, state);
     }
 
     // --- Persistence --------------------------------------------------------

@@ -108,32 +108,9 @@ def terminal_side():
     png(os.path.join(OUT, "terminal_side.png"), px)
 
 
-# --- Terminal top: metal plate with a central hatch ------------------------
-def terminal_top():
-    base = (74, 80, 90, 255)
-    dark = (40, 44, 51, 255)
-    light = (100, 107, 118, 255)
-    hatch = (54, 59, 67, 255)
-    px = grid(base)
-    edge(px, dark)
-    for i in range(1, W - 1):
-        px[1][i] = light
-        px[i][1] = light
-    rect(px, 5, 5, 11, 11, hatch)
-    edge_inner = (40, 44, 51, 255)
-    for x in range(5, 11):
-        px[5][x] = edge_inner
-        px[10][x] = edge_inner
-    for y in range(5, 11):
-        px[y][5] = edge_inner
-        px[y][10] = edge_inner
-    png(os.path.join(OUT, "terminal_top.png"), px)
-
-
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     conduit()
     terminal_front()
     terminal_side()
-    terminal_top()
     print("done")

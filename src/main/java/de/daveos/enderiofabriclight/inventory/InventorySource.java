@@ -1,12 +1,15 @@
 package de.daveos.enderiofabriclight.inventory;
 
+import de.daveos.enderiofabriclight.EnderIOFabricLight;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,15 +19,14 @@ import java.util.Map;
 /**
  * Abstraction over "where does the terminal get its accessible inventories from".
  *
- * <p>Milestone 1: a {@link RadiusInventorySource} that simply scans BlockEntities in a cube
- * around the terminal.
- *
- * <p>Milestone 2: a conduit-network-based implementation that follows pipes through the world.
- *
- * <p>The terminal itself never needs to know which one is active. This is the whole point of the
- * interface — keep the terminal code reusable across both milestones.
+ * <p>The terminal itself never needs to know which implementation is active, so the source of the
+ * inventory list can change (radius scan in M1, conduit network in M2) without touching it.
  */
 public interface InventorySource {
+    /** Blocks the terminal may use as storage. Data-driven: data/enderio-fabric-light/tags/block/terminal_storage.json */
+    TagKey<Block> STORAGE = TagKey.create(Registries.BLOCK,
+        Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "terminal_storage"));
+
     /**
      * Refresh the cached list. Called by the terminal on a fixed tick interval.
      */
@@ -36,14 +38,9 @@ public interface InventorySource {
      */
     List<Container> getInventories();
 
-    /**
-     * Which block entities the terminal is allowed to treat as accessible storage. Currently:
-     * vanilla chests (incl. trapped chests, which extend {@link ChestBlockEntity}) and barrels.
-     * Shared by all {@link InventorySource} implementations — the single place to widen the
-     * whitelist (e.g. via a block tag) later.
-     */
+    /** Whether the terminal may treat this block entity as storage: a container whose block is in {@link #STORAGE}. */
     static boolean isAllowedInventory(BlockEntity be) {
-        return be instanceof ChestBlockEntity || be instanceof BarrelBlockEntity;
+        return be instanceof Container && be.getBlockState().is(STORAGE);
     }
 
     /**
