@@ -2,10 +2,12 @@
   "block.enderio-fabric-light.terminal": "Terminal",
   "block.enderio-fabric-light.conduit": "Conduit",
   "container.enderio-fabric-light.terminal": "Terminal",
-  "gui.enderio-fabric-light.crafting": "Crafting grid",
-  "gui.enderio-fabric-light.return": "Return area",
   "gui.enderio-fabric-light.search": "Search…",
-  "gui.enderio-fabric-light.sort": "%s",
+  "gui.enderio-fabric-light.sort.name": "Sort: Name",
+  "gui.enderio-fabric-light.sort.count": "Sort: Amount",
+  "gui.enderio-fabric-light.return.hint": "Return area: items placed here are stored automatically",
+  "gui.enderio-fabric-light.empty": "No items",
+  "gui.enderio-fabric-light.no_matches": "No matches",
   "itemGroup.enderio-fabric-light.main": "EnderIO Fabric light",
   "tooltip.enderio-fabric-light.total": "Total: %s"
 }

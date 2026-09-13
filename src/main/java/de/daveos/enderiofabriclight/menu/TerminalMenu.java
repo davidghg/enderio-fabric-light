@@ -36,9 +36,9 @@ import java.util.Optional;
  * <ul>
  *   <li>0..8: crafting input grid (3×3)</li>
  *   <li>9: crafting result</li>
- *   <li>10..17: return area (4×2 = 8 slots)</li>
- *   <li>18..44: player main inventory (3×9)</li>
- *   <li>45..53: player hotbar (9)</li>
+ *   <li>10..19: return area (5×2)</li>
+ *   <li>20..46: player main inventory (3×9)</li>
+ *   <li>47..55: player hotbar (9)</li>
  * </ul>
  *
  * <p>The same constructor signature is called on both sides via {@code ExtendedMenuType}, but on
@@ -47,8 +47,23 @@ import java.util.Optional;
  * overwritten on every sync.
  */
 public class TerminalMenu extends AbstractContainerMenu {
-    public static final int GRID_COLS = 8;
-    public static final int GRID_ROWS = 9;
+    // GUI layout in screen-local pixels. Slot positions are part of the menu (both sides), so the
+    // screen reads these too. Sized to fit a 240px-tall GUI (854×480 window at GUI scale 2).
+    public static final int IMAGE_W = 284;
+    public static final int IMAGE_H = 224;
+    public static final int GRID_COLS = 9;
+    public static final int GRID_ROWS = 6;
+    public static final int GRID_X = 108;
+    public static final int GRID_Y = 22;
+    public static final int CRAFT_X = 8;
+    public static final int CRAFT_Y = 22;
+    public static final int RESULT_X = 80;
+    public static final int RESULT_Y = 40;
+    public static final int RETURN_X = 8;
+    public static final int RETURN_Y = 94;
+    public static final int PLAYER_X = (IMAGE_W - 162) / 2;
+    public static final int PLAYER_Y = 142;
+    public static final int HOTBAR_Y = 200;
 
     // Slot index ranges — keep in sync with the addX() calls in the constructor.
     private static final int CRAFT_FIRST = 0;
@@ -94,41 +109,36 @@ public class TerminalMenu extends AbstractContainerMenu {
     }
 
     private void addCraftingSlots() {
-        // 3x3 input grid at (8, 18).
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                this.addSlot(new Slot(craftSlots, col + row * 3, 8 + col * 18, 18 + row * 18));
+                this.addSlot(new Slot(craftSlots, col + row * 3, CRAFT_X + col * 18, CRAFT_Y + row * 18));
             }
         }
-        // Result slot to the right of the grid, vertically centered.
-        this.addSlot(new ResultSlot(owningPlayer, craftSlots, resultSlots, 0, 76, 36));
+        this.addSlot(new ResultSlot(owningPlayer, craftSlots, resultSlots, 0, RESULT_X, RESULT_Y));
     }
 
     private void addReturnArea() {
-        // 2 cols × 5 rows vertical strip at (8, 90), below the crafting area.
         for (int row = 0; row < TerminalBlockEntity.RETURN_ROWS; row++) {
             for (int col = 0; col < TerminalBlockEntity.RETURN_COLS; col++) {
                 int idx = col + row * TerminalBlockEntity.RETURN_COLS;
-                this.addSlot(new Slot(returnAreaContainer, idx, 8 + col * 18, 90 + row * 18));
+                this.addSlot(new Slot(returnAreaContainer, idx, RETURN_X + col * 18, RETURN_Y + row * 18));
             }
         }
     }
 
     private void addPlayerInventory(Inventory inv) {
-        // Player inventory centered horizontally in the 258-wide screen: (258-162)/2 = 48.
-        final int PX = 48;
-        final int MAIN_Y = 198;  // below the 9-row item grid (ends at y=180)
-        final int HOTBAR_Y = 256;
-        // Main inv 3×9.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(inv, col + row * 9 + 9, PX + col * 18, MAIN_Y + row * 18));
+                this.addSlot(new Slot(inv, col + row * 9 + 9, PLAYER_X + col * 18, PLAYER_Y + row * 18));
             }
         }
-        // Hotbar.
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(inv, col, PX + col * 18, HOTBAR_Y));
+            this.addSlot(new Slot(inv, col, PLAYER_X + col * 18, HOTBAR_Y));
         }
+    }
+
+    public static boolean isReturnSlot(int menuSlotIndex) {
+        return menuSlotIndex >= RETURN_FIRST && menuSlotIndex < RETURN_END;
     }
 
     public void setView(List<ItemStack> stacks) {

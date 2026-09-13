@@ -6,7 +6,6 @@ import de.daveos.enderiofabriclight.network.TerminalTakePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -23,263 +22,250 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import static de.daveos.enderiofabriclight.menu.TerminalMenu.*;
+
 /**
- * Client-side screen for the terminal.
+ * Client-side screen for the terminal. Dark slate theme with a teal accent matching the block's
+ * screen texture. Everything is drawn with fills — no GUI texture.
  *
- * <p>Two-column layout matching the original Ender IO Inventory Panel:
- * <ul>
- *   <li>Left column: 3×3 crafting input + result slot on top, 4×2 return area at the bottom.</li>
- *   <li>Right column: search box on top, 9×6 aggregated item grid below.</li>
- *   <li>Player inventory + hotbar centered along the bottom edge.</li>
- * </ul>
- *
- * <p>Click-swap: a left-click on a grid cell whose item differs from the current cursor stack
- * causes the server to deposit the cursor into the return area first (then take the new item).
- * This avoids the "I can't pick up X because my cursor is holding Y" dead-end that bare cursor
- * pickups would create.
+ * <p>Layout (screen-local pixels, constants live in {@link TerminalMenu}):
+ * header row with title + search + sort toggle; left column with crafting grid and return area;
+ * right column with the 9×6 item grid and scrollbar; player inventory along the bottom.
  */
 public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
-    private static final int IMAGE_W = 258;
-    private static final int IMAGE_H = 280;
-
-    // Item grid (right column). 8 cols × 9 rows — see TerminalMenu.GRID_COLS/ROWS.
-    private static final int GRID_X = 106;
-    private static final int GRID_Y = 18;
     private static final int CELL = 18;
 
-    // Crafting input grid (left column, top).
-    private static final int CRAFT_X = 8;
-    private static final int CRAFT_Y = 18;
-    private static final int RESULT_X = 76;
-    private static final int RESULT_Y = 36;
+    // Header row.
+    private static final int HEADER_Y = 4;
+    private static final int HEADER_H = 13;
+    private static final int SORT_W = 18;
+    private static final int SCROLLBAR_X = GRID_X + GRID_COLS * CELL + 3;
+    private static final int SCROLLBAR_W = 5;
+    private static final int SORT_X = SCROLLBAR_X + SCROLLBAR_W - SORT_W;
+    private static final int SEARCH_X = GRID_X - 1;
+    private static final int SEARCH_W = SORT_X - 3 - SEARCH_X;
 
-    // Arrow between the input grid (ends at x=62) and the result slot (starts at x=76).
-    private static final int ARROW_X = 65;
-    private static final int ARROW_Y = 43;
+    // Divider between left column and item grid.
+    private static final int DIVIDER_X = GRID_X - 4;
 
-    // Return area (left column, mid-section, 5 cols × 2 rows horizontal strip).
-    private static final int RETURN_X = 8;
-    private static final int RETURN_Y = 90;
+    // Palette.
+    private static final int C_OUTLINE    = 0xFF0E0F12;
+    private static final int C_BG         = 0xFF2A2E35;
+    private static final int C_BG_LIGHT   = 0xFF383D46;
+    private static final int C_BG_DARK    = 0xFF1E2126;
+    private static final int C_SLOT       = 0xFF1A1D22;
+    private static final int C_SLOT_TOP   = 0xFF121418;
+    private static final int C_SLOT_BOT   = 0xFF3B414A;
+    private static final int C_SLOT_HOVER = 0xFF2B3139;
+    private static final int C_RETURN     = 0xFF1A2629;
+    private static final int C_ACCENT     = 0xFF2CB8C0;
+    private static final int C_ACCENT_DIM = 0xFF1E6F75;
+    private static final int C_TEXT       = 0xFFE0E6EE;
+    private static final int C_TEXT_DIM   = 0xFF8A93A0;
 
-    // Player inventory positions (matches addPlayerInventory in TerminalMenu).
-    private static final int PLAYER_INV_X = 48;
-    private static final int PLAYER_INV_Y = 198;
-    private static final int HOTBAR_Y = 256;
-
-    // Search box (above the item grid). Narrowed to leave room for the sort button on the right.
-    private static final int SEARCH_X = 106;
-    private static final int SEARCH_Y = 4;
-    private static final int SEARCH_W = 116;
-    private static final int SEARCH_H = 14;
-
-    // Sort button, right end of the search row.
-    private static final int SORT_X = 226;
-    private static final int SORT_Y = 4;
-    private static final int SORT_W = 24;
-    private static final int SORT_H = 14;
-
-    // Scrollbar track on the right edge of the item grid.
-    private static final int SCROLLBAR_W = 4;
-
-    private static final int COL_BORDER  = 0xFF000000;
-    private static final int COL_PANEL   = 0xFFC6C6C6;
-    private static final int COL_LIGHT   = 0xFFFFFFFF;
-    private static final int COL_SHADOW  = 0xFF555555;
-    private static final int COL_SLOT    = 0xFF8B8B8B;
-    private static final int COL_SLOT_DK = 0xFF373737;
-    private static final int COL_LABEL   = 0xFF404040;
-
-    /** Sort orderings the player can cycle through with the sort button. */
     private enum SortMode {
-        COUNT("#"),   // most-abundant first
-        NAME("A-Z");  // alphabetical
+        NAME("AZ", "gui.enderio-fabric-light.sort.name"),
+        COUNT("#", "gui.enderio-fabric-light.sort.count");
 
-        final String label;
-        SortMode(String label) { this.label = label; }
-        SortMode next() { return this == COUNT ? NAME : COUNT; }
+        final String icon;
+        final String tooltipKey;
+        SortMode(String icon, String tooltipKey) { this.icon = icon; this.tooltipKey = tooltipKey; }
+        SortMode next() { return this == NAME ? COUNT : NAME; }
     }
 
     private String filter = "";
     private EditBox search;
-    private Button sortButton;
     private SortMode sortMode = SortMode.NAME;
     /** How many grid rows we've scrolled past (0 = top). */
     private int scrollRow = 0;
 
     public TerminalScreen(TerminalMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, IMAGE_W, IMAGE_H);
-        this.inventoryLabelX = PLAYER_INV_X;
-        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.search = new EditBox(
-            this.font,
-            this.leftPos + SEARCH_X, this.topPos + SEARCH_Y,
-            SEARCH_W, SEARCH_H,
-            Component.translatable("gui.enderio-fabric-light.search")
-        );
+        // Unbordered: we draw the field ourselves. Unbordered EditBoxes render text at their
+        // top-left corner, so the widget is inset into the drawn frame.
+        this.search = new EditBox(this.font,
+            this.leftPos + SEARCH_X + 4, this.topPos + HEADER_Y + 3,
+            SEARCH_W - 8, HEADER_H - 3,
+            Component.translatable("gui.enderio-fabric-light.search"));
+        this.search.setBordered(false);
+        this.search.setTextShadow(false);
+        this.search.setTextColor(C_TEXT);
         this.search.setMaxLength(50);
-        this.search.setBordered(true);
-        this.search.setHint(Component.translatable("gui.enderio-fabric-light.search"));
+        this.search.setHint(Component.translatable("gui.enderio-fabric-light.search").withColor(C_TEXT_DIM));
         this.search.setValue(this.filter);
-        this.search.setResponder(text -> this.filter = text.toLowerCase(Locale.ROOT));
-        addRenderableWidget(this.search);
-
-        // Sort toggle: cycles COUNT ↔ NAME, resets scroll so the player isn't left mid-list.
-        this.sortButton = Button.builder(sortLabel(), btn -> {
-            this.sortMode = this.sortMode.next();
-            btn.setMessage(sortLabel());
+        this.search.setResponder(text -> {
+            this.filter = text.toLowerCase(Locale.ROOT);
             this.scrollRow = 0;
-        }).bounds(this.leftPos + SORT_X, this.topPos + SORT_Y, SORT_W, SORT_H).build();
-        addRenderableWidget(this.sortButton);
+        });
+        addRenderableWidget(this.search);
     }
 
-    private Component sortLabel() {
-        return Component.translatable("gui.enderio-fabric-light.sort", this.sortMode.label);
-    }
+    // --- Background ---------------------------------------------------------
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
-        // No super call here on purpose: that's what draws the dark world-dimming behind the
-        // panel. The user wants the world to stay bright behind the GUI ("Schatten weg").
-
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        // No super call on purpose: it dims the world behind the panel, which the user doesn't want.
         int x0 = this.leftPos;
         int y0 = this.topPos;
 
-        // Outer panel.
-        drawRaisedPanel(extractor, x0, y0, this.imageWidth, this.imageHeight);
+        drawPanel(g, x0, y0, this.imageWidth, this.imageHeight);
 
-        // Item grid wells (right side).
-        for (int row = 0; row < TerminalMenu.GRID_ROWS; row++) {
-            for (int col = 0; col < TerminalMenu.GRID_COLS; col++) {
-                drawSunkenSlot(extractor,
-                    x0 + GRID_X + col * CELL - 1,
-                    y0 + GRID_Y + row * CELL - 1);
-            }
-        }
+        // Header: search field + sort toggle.
+        boolean searchActive = this.search != null && this.search.isFocused();
+        drawField(g, x0 + SEARCH_X, y0 + HEADER_Y, SEARCH_W, HEADER_H, searchActive ? C_ACCENT : C_SLOT_BOT);
+        boolean sortHover = isOver(mouseX, mouseY, SORT_X, HEADER_Y, SORT_W, HEADER_H);
+        drawField(g, x0 + SORT_X, y0 + HEADER_Y, SORT_W, HEADER_H, sortHover ? C_ACCENT : C_SLOT_BOT);
 
-        // Crafting input wells (left side, top).
+        // Left column: crafting grid, arrow, result, return area.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                drawSunkenSlot(extractor,
-                    x0 + CRAFT_X + col * CELL - 1,
-                    y0 + CRAFT_Y + row * CELL - 1);
+                drawSlot(g, x0 + CRAFT_X + col * CELL - 1, y0 + CRAFT_Y + row * CELL - 1, C_SLOT);
             }
         }
-        // Crafting result well.
-        drawSunkenSlot(extractor, x0 + RESULT_X - 1, y0 + RESULT_Y - 1);
-        // Small arrow from input → result (9 wide × 5 tall, dark grey).
-        drawArrow(extractor, x0 + ARROW_X, y0 + ARROW_Y);
+        drawArrow(g, x0 + CRAFT_X + 3 * CELL + 3, y0 + RESULT_Y + 5);
+        drawResultWell(g, x0 + RESULT_X - 5, y0 + RESULT_Y - 5);
 
-        // Return area wells (left side, vertical strip).
+        g.fill(x0 + CRAFT_X - 1, y0 + RETURN_Y - 10, x0 + DIVIDER_X - 3, y0 + RETURN_Y - 9, C_BG_LIGHT);
         for (int row = 0; row < TerminalBlockEntity.RETURN_ROWS; row++) {
             for (int col = 0; col < TerminalBlockEntity.RETURN_COLS; col++) {
-                drawSunkenSlot(extractor,
-                    x0 + RETURN_X + col * CELL - 1,
-                    y0 + RETURN_Y + row * CELL - 1);
+                drawSlot(g, x0 + RETURN_X + col * CELL - 1, y0 + RETURN_Y + row * CELL - 1, C_RETURN);
             }
         }
 
-        // "Return area" label above the return strip. ("Crafting grid" is drawn via extractLabels.)
-        extractor.text(this.font, Component.translatable("gui.enderio-fabric-light.return"),
-            x0 + RETURN_X, y0 + RETURN_Y - 10, COL_LABEL);
+        // Vertical divider between left column and item grid.
+        g.fill(x0 + DIVIDER_X, y0 + GRID_Y - 1, x0 + DIVIDER_X + 1, y0 + GRID_Y + GRID_ROWS * CELL - 1, C_BG_DARK);
+        g.fill(x0 + DIVIDER_X + 1, y0 + GRID_Y - 1, x0 + DIVIDER_X + 2, y0 + GRID_Y + GRID_ROWS * CELL - 1, C_BG_LIGHT);
 
-        // Vertical separator between the left section (crafting + return) and the item grid.
-        // Sits in the gap between the left content (max x≈98) and the item-grid wells (x≈105),
-        // and runs the full height of the item grid. Sunken 2px groove.
-        int sepX = x0 + GRID_X - 4;
-        int sepTop = y0 + 16;
-        int sepBottom = y0 + GRID_Y + TerminalMenu.GRID_ROWS * CELL;
-        extractor.fill(sepX, sepTop, sepX + 1, sepBottom, COL_SHADOW);
-        extractor.fill(sepX + 1, sepTop, sepX + 2, sepBottom, COL_LIGHT);
+        // Item grid, with hover highlight drawn behind the item.
+        int hovered = hoveredGridCell(mouseX, mouseY);
+        for (int row = 0; row < GRID_ROWS; row++) {
+            for (int col = 0; col < GRID_COLS; col++) {
+                int fill = (row * GRID_COLS + col == hovered) ? C_SLOT_HOVER : C_SLOT;
+                drawSlot(g, x0 + GRID_X + col * CELL - 1, y0 + GRID_Y + row * CELL - 1, fill);
+            }
+        }
+        drawScrollbar(g, x0, y0);
 
-        // Horizontal separator between the crafting block and the return area on the left.
-        int hSepY = y0 + RETURN_Y - 14;
-        extractor.fill(x0 + CRAFT_X, hSepY, sepX, hSepY + 1, COL_SHADOW);
-        extractor.fill(x0 + CRAFT_X, hSepY + 1, sepX, hSepY + 2, COL_LIGHT);
+        // Horizontal divider above the player inventory.
+        int invDividerY = y0 + PLAYER_Y - 7;
+        g.fill(x0 + 7, invDividerY, x0 + this.imageWidth - 7, invDividerY + 1, C_BG_DARK);
+        g.fill(x0 + 7, invDividerY + 1, x0 + this.imageWidth - 7, invDividerY + 2, C_BG_LIGHT);
 
-        // Player inventory slot wells (3 main rows + hotbar), centered.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                drawSunkenSlot(extractor,
-                    x0 + PLAYER_INV_X + col * 18 - 1,
-                    y0 + PLAYER_INV_Y + row * 18 - 1);
+                drawSlot(g, x0 + PLAYER_X + col * CELL - 1, y0 + PLAYER_Y + row * CELL - 1, C_SLOT);
             }
         }
         for (int col = 0; col < 9; col++) {
-            drawSunkenSlot(extractor, x0 + PLAYER_INV_X + col * 18 - 1, y0 + HOTBAR_Y - 1);
+            drawSlot(g, x0 + PLAYER_X + col * CELL - 1, y0 + HOTBAR_Y - 1, C_SLOT);
         }
-
-        // Scrollbar on the right edge of the item grid.
-        drawScrollbar(extractor, x0, y0);
     }
 
-    private void drawScrollbar(GuiGraphicsExtractor extractor, int x0, int y0) {
-        int trackX = x0 + GRID_X + TerminalMenu.GRID_COLS * CELL + 1;
+    private void drawScrollbar(GuiGraphicsExtractor g, int x0, int y0) {
+        int trackX = x0 + SCROLLBAR_X;
         int trackTop = y0 + GRID_Y - 1;
-        int trackH = TerminalMenu.GRID_ROWS * CELL;
-        // Track (sunken groove).
-        extractor.fill(trackX, trackTop, trackX + SCROLLBAR_W, trackTop + trackH, COL_SLOT_DK);
+        int trackH = GRID_ROWS * CELL;
+        g.fill(trackX, trackTop, trackX + SCROLLBAR_W, trackTop + trackH, C_SLOT_TOP);
 
         int total = totalRows();
-        int visible = TerminalMenu.GRID_ROWS;
-        if (total <= visible) {
-            // No scrolling needed — thumb fills the whole track.
-            extractor.fill(trackX, trackTop, trackX + SCROLLBAR_W, trackTop + trackH, COL_LIGHT);
+        if (total <= GRID_ROWS) {
+            g.fill(trackX + 1, trackTop + 1, trackX + SCROLLBAR_W - 1, trackTop + trackH - 1, C_ACCENT_DIM);
             return;
         }
-        int thumbH = Math.max(8, trackH * visible / total);
-        int maxScroll = total - visible;
-        int thumbY = trackTop + (trackH - thumbH) * scrollRow / maxScroll;
-        extractor.fill(trackX, thumbY, trackX + SCROLLBAR_W, thumbY + thumbH, COL_LIGHT);
-        extractor.fill(trackX, thumbY, trackX + SCROLLBAR_W - 1, thumbY + thumbH - 1, COL_PANEL);
+        int thumbH = Math.max(10, trackH * GRID_ROWS / total);
+        int thumbY = trackTop + (trackH - thumbH) * scrollRow / (total - GRID_ROWS);
+        g.fill(trackX + 1, thumbY + 1, trackX + SCROLLBAR_W - 1, thumbY + thumbH - 1, C_ACCENT);
+    }
+
+    // --- Foreground ---------------------------------------------------------
+
+    @Override
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        // Already translated to (leftPos, topPos). Inventory label intentionally omitted.
+        g.text(this.font, this.title, 8, HEADER_Y + 3, C_TEXT, false);
+
+        int iconW = this.font.width(sortMode.icon);
+        g.text(this.font, sortMode.icon, SORT_X + (SORT_W - iconW) / 2 + 1, HEADER_Y + 3, C_ACCENT, false);
     }
 
     @Override
-    public void extractContents(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
-        super.extractContents(extractor, mouseX, mouseY, partialTick);
+    public void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractContents(g, mouseX, mouseY, partialTick);
 
         List<ItemStack> view = displayList();
-        clampScroll(view);
-        int start = scrollRow * TerminalMenu.GRID_COLS;
-        int cellsPerPage = TerminalMenu.GRID_COLS * TerminalMenu.GRID_ROWS;
+        clampScroll(view.size());
 
-        for (int cell = 0; cell < cellsPerPage; cell++) {
-            int idx = start + cell;
-            if (idx >= view.size()) break;
-            ItemStack stack = view.get(idx);
-            int col = cell % TerminalMenu.GRID_COLS;
-            int row = cell / TerminalMenu.GRID_COLS;
-            int cx = this.leftPos + GRID_X + col * CELL;
-            int cy = this.topPos + GRID_Y + row * CELL;
+        if (view.isEmpty()) {
+            Component msg = Component.translatable(this.filter.isEmpty()
+                ? "gui.enderio-fabric-light.empty"
+                : "gui.enderio-fabric-light.no_matches");
+            int cx = this.leftPos + GRID_X + GRID_COLS * CELL / 2;
+            int cy = this.topPos + GRID_Y + GRID_ROWS * CELL / 2 - 4;
+            g.text(this.font, msg, cx - this.font.width(msg) / 2, cy, C_TEXT_DIM, false);
+            return;
+        }
 
-            extractor.item(stack, cx, cy);
-            extractor.itemDecorations(this.font, stack, cx, cy, formatCount(stack.getCount()));
+        int start = scrollRow * GRID_COLS;
+        int cells = GRID_COLS * GRID_ROWS;
+        for (int cell = 0; cell < cells && start + cell < view.size(); cell++) {
+            ItemStack stack = view.get(start + cell);
+            int cx = this.leftPos + GRID_X + (cell % GRID_COLS) * CELL;
+            int cy = this.topPos + GRID_Y + (cell / GRID_COLS) * CELL;
+            g.item(stack, cx, cy);
+            // Empty string suppresses vanilla's full-size count; we draw a compact one instead.
+            g.itemDecorations(this.font, stack, cx, cy, "");
+            drawCount(g, stack.getCount(), cx, cy);
         }
     }
 
-    @Override
-    protected void extractTooltip(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
-        super.extractTooltip(extractor, mouseX, mouseY);
-
-        int hovered = hoveredGridIndex(mouseX, mouseY);
-        if (hovered < 0) return;
-
-        List<ItemStack> view = displayList();
-        if (hovered >= view.size()) return;
-
-        ItemStack stack = view.get(hovered);
-        List<Component> lines = new ArrayList<>(Screen.getTooltipFromItem(this.minecraft, stack));
-        lines.add(Component.translatable(
-            "tooltip.enderio-fabric-light.total",
-            String.format(Locale.ROOT, "%,d", stack.getCount())
-        ).withStyle(ChatFormatting.GRAY));
-
-        extractor.setTooltipForNextFrame(this.font, lines, Optional.empty(), mouseX, mouseY);
+    /** Half-scale count in the cell's bottom-right corner, so long numbers never spill into neighbours. */
+    private void drawCount(GuiGraphicsExtractor g, int count, int cellX, int cellY) {
+        if (count <= 1) return;
+        String s = formatCount(count);
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.scale(0.5f, 0.5f);
+        int textX = (cellX + 16) * 2 - this.font.width(s);
+        int textY = (cellY + 16) * 2 - this.font.lineHeight + 1;
+        g.text(this.font, s, textX, textY, C_TEXT, true);
+        pose.popMatrix();
     }
+
+    @Override
+    protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractTooltip(g, mouseX, mouseY);
+
+        if (isOver(mouseX, mouseY, SORT_X, HEADER_Y, SORT_W, HEADER_H)) {
+            g.setTooltipForNextFrame(this.font, Component.translatable(sortMode.tooltipKey), mouseX, mouseY);
+            return;
+        }
+
+        if (this.hoveredSlot != null && !this.hoveredSlot.hasItem() && this.menu.getCarried().isEmpty()
+                && TerminalMenu.isReturnSlot(this.hoveredSlot.index)) {
+            g.setTooltipForNextFrame(this.font,
+                Component.translatable("gui.enderio-fabric-light.return.hint"), mouseX, mouseY);
+            return;
+        }
+
+        int hovered = hoveredGridCell(mouseX, mouseY);
+        if (hovered < 0) return;
+        List<ItemStack> view = displayList();
+        int index = scrollRow * GRID_COLS + hovered;
+        if (index >= view.size()) return;
+
+        ItemStack stack = view.get(index);
+        List<Component> lines = new ArrayList<>(Screen.getTooltipFromItem(this.minecraft, stack));
+        lines.add(Component.translatable("tooltip.enderio-fabric-light.total",
+            String.format(Locale.ROOT, "%,d", stack.getCount())).withStyle(ChatFormatting.GRAY));
+        g.setTooltipForNextFrame(this.font, lines, Optional.empty(), mouseX, mouseY);
+    }
+
+    // --- View shaping -------------------------------------------------------
 
     /** Filtered + sorted view of the aggregated stacks. Server sends the full list; we shape it here. */
     private List<ItemStack> displayList() {
@@ -287,60 +273,61 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         if (!this.filter.isEmpty()) {
             list.removeIf(s -> !s.getHoverName().getString().toLowerCase(Locale.ROOT).contains(this.filter));
         }
+        Comparator<ItemStack> byName = Comparator.comparing(s -> s.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER);
         switch (this.sortMode) {
-            case COUNT -> list.sort(Comparator.comparingInt(ItemStack::getCount).reversed()
-                .thenComparing(s -> s.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER));
-            case NAME -> list.sort(Comparator.comparing(
-                (ItemStack s) -> s.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER));
+            case NAME -> list.sort(byName);
+            case COUNT -> list.sort(Comparator.comparingInt(ItemStack::getCount).reversed().thenComparing(byName));
         }
         return list;
     }
 
-    /** The index into {@link #displayList()} under the mouse, accounting for scroll. -1 if outside the grid. */
-    private int hoveredGridIndex(double mouseX, double mouseY) {
-        int gridLeft   = this.leftPos + GRID_X;
-        int gridTop    = this.topPos  + GRID_Y;
-        int gridRight  = gridLeft + TerminalMenu.GRID_COLS * CELL;
-        int gridBottom = gridTop  + TerminalMenu.GRID_ROWS * CELL;
-        if (mouseX < gridLeft || mouseX >= gridRight || mouseY < gridTop || mouseY >= gridBottom) {
-            return -1;
-        }
-        int col = (int) ((mouseX - gridLeft) / CELL);
-        int row = (int) ((mouseY - gridTop)  / CELL);
-        return (scrollRow + row) * TerminalMenu.GRID_COLS + col;
+    /** Grid cell (0-based, relative to the visible page) under the mouse, or -1. */
+    private int hoveredGridCell(double mouseX, double mouseY) {
+        if (!isOver(mouseX, mouseY, GRID_X, GRID_Y, GRID_COLS * CELL, GRID_ROWS * CELL)) return -1;
+        int col = (int) ((mouseX - this.leftPos - GRID_X) / CELL);
+        int row = (int) ((mouseY - this.topPos - GRID_Y) / CELL);
+        return row * GRID_COLS + col;
+    }
+
+    private boolean isOver(double mouseX, double mouseY, int x, int y, int w, int h) {
+        double lx = mouseX - this.leftPos;
+        double ly = mouseY - this.topPos;
+        return lx >= x && lx < x + w && ly >= y && ly < y + h;
     }
 
     private int totalRows() {
-        int size = displayList().size();
-        return (size + TerminalMenu.GRID_COLS - 1) / TerminalMenu.GRID_COLS;
+        return (displayList().size() + GRID_COLS - 1) / GRID_COLS;
     }
 
-    private int maxScrollRow() {
-        return Math.max(0, totalRows() - TerminalMenu.GRID_ROWS);
+    private void clampScroll(int viewSize) {
+        int total = (viewSize + GRID_COLS - 1) / GRID_COLS;
+        this.scrollRow = Mth.clamp(this.scrollRow, 0, Math.max(0, total - GRID_ROWS));
     }
 
-    private void clampScroll(List<ItemStack> view) {
-        int total = (view.size() + TerminalMenu.GRID_COLS - 1) / TerminalMenu.GRID_COLS;
-        int max = Math.max(0, total - TerminalMenu.GRID_ROWS);
-        this.scrollRow = Mth.clamp(this.scrollRow, 0, max);
-    }
+    // --- Input --------------------------------------------------------------
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean fromRelease) {
         int button = event.button();
+
+        if (button == 0 && isOver(event.x(), event.y(), SORT_X, HEADER_Y, SORT_W, HEADER_H)) {
+            this.sortMode = this.sortMode.next();
+            this.scrollRow = 0;
+            return true;
+        }
+
         if (button == 0 || button == 1) {
-            int index = hoveredGridIndex(event.x(), event.y());
-            if (index >= 0) {
+            int cell = hoveredGridCell(event.x(), event.y());
+            if (cell >= 0) {
                 List<ItemStack> view = displayList();
+                int index = scrollRow * GRID_COLS + cell;
                 if (index < view.size()) {
                     ItemStack template = view.get(index);
                     int amount = (button == 1) ? template.getMaxStackSize() : 1;
-                    boolean toInventory = event.hasShiftDown();
-
                     ClientPlayNetworking.send(new TerminalTakePayload(
-                        template.copyWithCount(1), amount, toInventory));
-                    return true;
+                        template.copyWithCount(1), amount, event.hasShiftDown()));
                 }
+                return true;
             }
         }
         return super.mouseClicked(event, fromRelease);
@@ -348,9 +335,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        // While the search box is actively taking input, swallow the inventory key (default "E")
-        // so it doesn't close the screen mid-typing. The actual character is inserted via the
-        // separate charTyped path, so typing "e" still works — it just no longer closes the GUI.
+        // While typing in the search box, don't let the inventory key (default "E") close the screen.
         if (this.search != null && this.search.canConsumeInput()
                 && this.minecraft.options.keyInventory.matches(event)) {
             return true;
@@ -360,15 +345,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        // Scroll the item grid when the cursor is over it (or the scrollbar).
-        int gridLeft = this.leftPos + GRID_X;
-        int gridTop  = this.topPos  + GRID_Y;
-        int gridRight = gridLeft + TerminalMenu.GRID_COLS * CELL + SCROLLBAR_W + 2;
-        int gridBottom = gridTop + TerminalMenu.GRID_ROWS * CELL;
-        if (mouseX >= gridLeft && mouseX < gridRight && mouseY >= gridTop && mouseY < gridBottom) {
-            int max = maxScrollRow();
+        if (isOver(mouseX, mouseY, GRID_X, GRID_Y, SCROLLBAR_X + SCROLLBAR_W - GRID_X, GRID_ROWS * CELL)) {
+            int max = Math.max(0, totalRows() - GRID_ROWS);
             if (max > 0) {
-                // scrollY > 0 = wheel up = show earlier rows.
                 this.scrollRow = Mth.clamp(this.scrollRow - (int) Math.signum(scrollY), 0, max);
                 return true;
             }
@@ -378,56 +357,61 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     // --- Drawing helpers ----------------------------------------------------
 
-    private static void drawRaisedPanel(GuiGraphicsExtractor e, int x, int y, int w, int h) {
-        int x2 = x + w;
-        int y2 = y + h;
-        e.fill(x + 1, y, x2 - 1, y + 1, COL_BORDER);
-        e.fill(x + 1, y2 - 1, x2 - 1, y2, COL_BORDER);
-        e.fill(x, y + 1, x + 1, y2 - 1, COL_BORDER);
-        e.fill(x2 - 1, y + 1, x2, y2 - 1, COL_BORDER);
-        e.fill(x + 2, y + 1, x2 - 2, y + 2, COL_LIGHT);
-        e.fill(x + 1, y + 2, x + 2, y2 - 2, COL_LIGHT);
-        e.fill(x + 2, y2 - 2, x2 - 2, y2 - 1, COL_SHADOW);
-        e.fill(x2 - 2, y + 2, x2 - 1, y2 - 2, COL_SHADOW);
-        e.fill(x + 2, y + 2, x2 - 2, y2 - 2, COL_PANEL);
+    /** Panel with a 1px outline (rounded corners) and a subtle inner bevel. */
+    private static void drawPanel(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+        int x2 = x + w, y2 = y + h;
+        g.fill(x + 2, y, x2 - 2, y + 1, C_OUTLINE);
+        g.fill(x + 2, y2 - 1, x2 - 2, y2, C_OUTLINE);
+        g.fill(x, y + 2, x + 1, y2 - 2, C_OUTLINE);
+        g.fill(x2 - 1, y + 2, x2, y2 - 2, C_OUTLINE);
+        g.fill(x + 1, y + 1, x + 2, y + 2, C_OUTLINE);
+        g.fill(x2 - 2, y + 1, x2 - 1, y + 2, C_OUTLINE);
+        g.fill(x + 1, y2 - 2, x + 2, y2 - 1, C_OUTLINE);
+        g.fill(x2 - 2, y2 - 2, x2 - 1, y2 - 1, C_OUTLINE);
+
+        g.fill(x + 2, y + 1, x2 - 2, y2 - 1, C_BG);
+        g.fill(x + 1, y + 2, x + 2, y2 - 2, C_BG);
+        g.fill(x2 - 2, y + 2, x2 - 1, y2 - 2, C_BG);
+
+        g.fill(x + 2, y + 1, x2 - 2, y + 2, C_BG_LIGHT);
+        g.fill(x + 1, y + 2, x + 2, y2 - 2, C_BG_LIGHT);
+        g.fill(x + 2, y2 - 2, x2 - 2, y2 - 1, C_BG_DARK);
+        g.fill(x2 - 2, y + 2, x2 - 1, y2 - 2, C_BG_DARK);
     }
 
-    /**
-     * 9×5 right-pointing arrow drawn entirely in fills. Used between the crafting input grid
-     * and the result slot, so the player visually understands the "input → result" flow.
-     */
-    private static void drawArrow(GuiGraphicsExtractor e, int x, int y) {
-        // Shaft (6 wide × 3 tall).
-        e.fill(x, y + 1, x + 6, y + 4, COL_LABEL);
-        // Triangular tip, tapering one pixel per column.
-        e.fill(x + 6, y,     x + 7, y + 5, COL_LABEL);
-        e.fill(x + 7, y + 1, x + 8, y + 4, COL_LABEL);
-        e.fill(x + 8, y + 2, x + 9, y + 3, COL_LABEL);
+    /** 18×18 sunken slot well. */
+    private static void drawSlot(GuiGraphicsExtractor g, int x, int y, int fill) {
+        g.fill(x, y, x + 18, y + 18, C_SLOT_BOT);
+        g.fill(x, y, x + 17, y + 17, C_SLOT_TOP);
+        g.fill(x + 1, y + 1, x + 17, y + 17, fill);
     }
 
-    @Override
-    protected void extractLabels(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
-        // We deliberately skip the menu's own title ("Terminal") — the layout uses section labels
-        // ("Crafting" + "Return") instead, and the title would overlap with "Crafting" at y=6.
-        extractor.text(this.font, Component.translatable("gui.enderio-fabric-light.crafting"),
-            this.titleLabelX, this.titleLabelY, COL_LABEL);
-        extractor.text(this.font, this.playerInventoryTitle,
-            this.inventoryLabelX, this.inventoryLabelY, COL_LABEL);
+    /** 26×26 result well with an accent frame. */
+    private static void drawResultWell(GuiGraphicsExtractor g, int x, int y) {
+        g.fill(x, y, x + 26, y + 26, C_ACCENT_DIM);
+        g.fill(x + 1, y + 1, x + 25, y + 25, C_SLOT_TOP);
+        g.fill(x + 2, y + 2, x + 25, y + 25, C_SLOT);
     }
 
-    private static void drawSunkenSlot(GuiGraphicsExtractor e, int x, int y) {
-        int w = 18, h = 18;
-        e.fill(x, y, x + w, y + 1, COL_SLOT_DK);
-        e.fill(x, y, x + 1, y + h, COL_SLOT_DK);
-        e.fill(x, y + h - 1, x + w, y + h, COL_LIGHT);
-        e.fill(x + w - 1, y, x + w, y + h, COL_LIGHT);
-        e.fill(x + 1, y + 1, x + w - 1, y + h - 1, COL_SLOT);
+    /** Text field frame; the border colour signals focus/hover. */
+    private static void drawField(GuiGraphicsExtractor g, int x, int y, int w, int h, int border) {
+        g.fill(x, y, x + w, y + h, border);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, C_SLOT);
+    }
+
+    /** 8×7 right-pointing chevron arrow. */
+    private static void drawArrow(GuiGraphicsExtractor g, int x, int y) {
+        g.fill(x, y + 3, x + 5, y + 4, C_TEXT_DIM);
+        for (int i = 0; i < 4; i++) {
+            g.fill(x + 4 + i, y + i, x + 5 + i, y + 7 - i, C_TEXT_DIM);
+        }
     }
 
     private static String formatCount(int n) {
         if (n < 1_000) return Integer.toString(n);
-        if (n < 10_000) return String.format("%.1fK", n / 1000.0);
-        if (n < 1_000_000) return (n / 1000) + "K";
-        return String.format("%.1fM", n / 1_000_000.0);
+        if (n < 10_000) return String.format(Locale.ROOT, "%.1fK", n / 1_000.0);
+        if (n < 1_000_000) return (n / 1_000) + "K";
+        if (n < 10_000_000) return String.format(Locale.ROOT, "%.1fM", n / 1_000_000.0);
+        return (n / 1_000_000) + "M";
     }
 }
