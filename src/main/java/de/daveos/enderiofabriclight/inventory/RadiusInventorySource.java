@@ -47,6 +47,6 @@ public class RadiusInventorySource implements InventorySource {
 
     @Override
     public List<Container> getInventories() {
-        return cached;
+        return cached.stream().filter(c -> !((BlockEntity) c).isRemoved()).toList();
     }
 }

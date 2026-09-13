@@ -259,7 +259,9 @@ public class TerminalMenu extends AbstractContainerMenu {
             if (level.isClientSide()) return;
             if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;
 
-            int amount = requestedAmount;
+            // The amount comes from the client and must not be trusted: without a cap a modified
+            // client could empty the whole network onto the floor in one packet.
+            int amount = Math.min(requestedAmount, template.getMaxStackSize());
 
             if (!toInventory) {
                 ItemStack cursor = this.getCarried();
@@ -308,7 +310,8 @@ public class TerminalMenu extends AbstractContainerMenu {
                     this.setCarried(cursor);
                 }
             }
-            broadcastChanges();
+            super.broadcastChanges();
+            syncView();
         });
     }
 
@@ -342,10 +345,21 @@ public class TerminalMenu extends AbstractContainerMenu {
 
     // --- Sync ---------------------------------------------------------------
 
+    /** Ticks between rebuilds of the aggregated view; vanilla calls broadcastChanges every tick. */
+    private static final int VIEW_SYNC_INTERVAL = 5;
+    /** Starts "due" so the item grid fills on the first tick after opening, not 5 ticks later. */
+    private int viewSyncCounter = VIEW_SYNC_INTERVAL;
+
     @Override
     public void broadcastChanges() {
         super.broadcastChanges();
+        if (++viewSyncCounter < VIEW_SYNC_INTERVAL) return;
+        syncView();
+    }
 
+    /** Rebuilds the aggregated view and pushes it to viewers if it changed. */
+    private void syncView() {
+        viewSyncCounter = 0;
         this.access.execute((level, pos) -> {
             if (level.isClientSide()) return;
             if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;

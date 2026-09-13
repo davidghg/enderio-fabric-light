@@ -9,7 +9,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Abstraction over "where does the terminal get its accessible inventories from".
@@ -54,28 +56,44 @@ public interface InventorySource {
      * override for a faster path if they already maintain an aggregated cache.
      */
     default List<ItemStack> getAggregatedStacks() {
-        List<ItemStack> result = new ArrayList<>();
+        // Hash map keyed by item+components: O(slots) instead of O(slots × distinct items).
+        // LinkedHashMap keeps discovery order stable, so unchanged inventories compare equal.
+        Map<StackKey, ItemStack> merged = new LinkedHashMap<>();
         for (Container container : getInventories()) {
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
                 ItemStack stack = container.getItem(slot);
                 if (stack.isEmpty()) continue;
-                mergeInto(result, stack);
+                ItemStack existing = merged.get(new StackKey(stack));
+                if (existing == null) {
+                    // Copy so the aggregate never aliases a real slot.
+                    ItemStack copy = stack.copy();
+                    merged.put(new StackKey(copy), copy);
+                } else {
+                    existing.setCount(existing.getCount() + stack.getCount());
+                }
             }
         }
-        return result;
+        return new ArrayList<>(merged.values());
     }
 
-    private static void mergeInto(List<ItemStack> result, ItemStack stack) {
-        for (int i = 0; i < result.size(); i++) {
-            ItemStack existing = result.get(i);
-            if (ItemStack.isSameItemSameComponents(existing, stack)) {
-                ItemStack merged = existing.copy();
-                merged.setCount(existing.getCount() + stack.getCount());
-                result.set(i, merged);
-                return;
-            }
+    /** Map key comparing stacks by item + components, ignoring count. */
+    final class StackKey {
+        private final ItemStack stack;
+        private final int hash;
+
+        StackKey(ItemStack stack) {
+            this.stack = stack;
+            this.hash = ItemStack.hashItemAndComponents(stack);
         }
-        // Copy to prevent mutating the source slot when callers further sum into us.
-        result.add(stack.copy());
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof StackKey other && ItemStack.isSameItemSameComponents(stack, other.stack);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
     }
 }

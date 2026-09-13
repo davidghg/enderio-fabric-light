@@ -32,7 +32,17 @@ public class ConduitInventorySource implements InventorySource {
     /** Safety cap on traversed conduits, so a pathological network can't stall the server tick. */
     private static final int MAX_NODES = 2048;
 
-    private List<Container> cached = List.of();
+    /** A reachable container plus the block entities backing it (two for a double chest). */
+    private record Entry(Container container, List<BlockEntity> parts) {
+        boolean isValid() {
+            for (BlockEntity be : parts) {
+                if (be.isRemoved()) return false;
+            }
+            return true;
+        }
+    }
+
+    private List<Entry> cached = List.of();
 
     @Override
     public void update(Level level, BlockPos terminalPos) {
@@ -57,7 +67,7 @@ public class ConduitInventorySource implements InventorySource {
         }
 
         // 2. Collect containers adjacent to the terminal itself or any network conduit.
-        List<Container> result = new ArrayList<>();
+        List<Entry> result = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
 
         collectAround(level, terminalPos, seen, result);
@@ -68,7 +78,7 @@ public class ConduitInventorySource implements InventorySource {
         cached = List.copyOf(result);
     }
 
-    private static void collectAround(Level level, BlockPos node, Set<BlockPos> seen, List<Container> out) {
+    private static void collectAround(Level level, BlockPos node, Set<BlockPos> seen, List<Entry> out) {
         for (Direction dir : Direction.values()) {
             BlockPos n = node.relative(dir);
             if (!seen.add(n)) continue; // already inspected from another node (or a chest's other half)
@@ -78,23 +88,36 @@ public class ConduitInventorySource implements InventorySource {
                 // Treat a double chest as a single 54-slot container, so one conduit touching
                 // either half exposes the whole thing. Mark the other half as seen so it isn't
                 // added a second time when reached from another conduit.
+                List<BlockEntity> parts = new ArrayList<>(2);
+                if (level.getBlockEntity(n) instanceof BlockEntity self) parts.add(self);
                 if (st.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
-                    seen.add(n.relative(ChestBlock.getConnectedDirection(st)));
+                    BlockPos other = n.relative(ChestBlock.getConnectedDirection(st));
+                    seen.add(other);
+                    if (level.getBlockEntity(other) instanceof BlockEntity otherBe) parts.add(otherBe);
                 }
                 Container combined = ChestBlock.getContainer(chestBlock, st, level, n, true);
-                if (combined != null) out.add(combined);
+                if (combined != null && !parts.isEmpty()) out.add(new Entry(combined, List.copyOf(parts)));
                 continue;
             }
 
             BlockEntity be = level.getBlockEntity(n);
             if (be != null && InventorySource.isAllowedInventory(be)) {
-                out.add((Container) be);
+                out.add(new Entry((Container) be, List.of(be)));
             }
         }
     }
 
+    /**
+     * Filters out containers whose block entity was removed since the last scan (block broken,
+     * chunk unloaded). Without this, a chest broken between scans drops its items while the
+     * terminal can still extract the same items from the stale reference — a duplication exploit.
+     */
     @Override
     public List<Container> getInventories() {
-        return cached;
+        List<Container> result = new ArrayList<>(cached.size());
+        for (Entry e : cached) {
+            if (e.isValid()) result.add(e.container());
+        }
+        return result;
     }
 }
