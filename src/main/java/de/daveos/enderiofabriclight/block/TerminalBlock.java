@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import de.daveos.enderiofabriclight.blockentity.ModBlockEntities;
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
 import de.daveos.enderiofabriclight.inventory.InventorySource;
+import de.daveos.enderiofabriclight.inventory.NetworkVersion;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -88,9 +89,11 @@ public class TerminalBlock extends DirectionalBlock implements EntityBlock {
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess tickAccess,
                                      BlockPos pos, Direction direction, BlockPos neighborPos,
                                      BlockState neighborState, RandomSource random) {
-        // Pop off (with drops) like a torch when the supporting block goes away.
-        if (direction == state.getValue(FACING).getOpposite() && !canSurvive(state, level, pos)) {
-            return Blocks.AIR.defaultBlockState();
+        if (direction == state.getValue(FACING).getOpposite()) {
+            // Storage mounted directly behind the panel may have appeared or vanished.
+            NetworkVersion.bump();
+            // Pop off (with drops) like a torch when the supporting block goes away.
+            if (!canSurvive(state, level, pos)) return Blocks.AIR.defaultBlockState();
         }
         return state;
     }

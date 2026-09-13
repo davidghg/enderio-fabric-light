@@ -61,6 +61,10 @@ public class ConduitInventorySource implements InventorySource {
         Set<BlockPos> seen = new HashSet<>();
         seen.add(terminalPos);
 
+        if (!level.isLoaded(back)) {
+            cached = List.of();
+            return;
+        }
         BlockState backState = level.getBlockState(back);
         if (!backState.is(ModBlocks.CONDUIT)) {
             collectAt(level, back, seen, result);
@@ -83,6 +87,9 @@ public class ConduitInventorySource implements InventorySource {
         queue.add(back);
         while (!queue.isEmpty()) {
             BlockPos c = queue.poll();
+            // Never force-load chunks: parts of a network in unloaded chunks are simply skipped
+            // and picked up by the terminal's periodic rescan once they load.
+            if (!level.isLoaded(c)) continue;
             BlockState cs = level.getBlockState(c);
             if (!cs.is(ModBlocks.CONDUIT)) continue;
             for (Direction dir : Direction.values()) {
@@ -106,6 +113,7 @@ public class ConduitInventorySource implements InventorySource {
     /** Adds the storage block at {@code n} (if any) to {@code out}. */
     private static void collectAt(Level level, BlockPos n, Set<BlockPos> seen, List<Entry> out) {
         if (!seen.add(n)) return; // already inspected from another node (or a chest's other half)
+        if (!level.isLoaded(n)) return;
 
         BlockState st = level.getBlockState(n);
         if (!st.is(InventorySource.STORAGE)) return;
@@ -118,6 +126,7 @@ public class ConduitInventorySource implements InventorySource {
             if (level.getBlockEntity(n) instanceof BlockEntity self) parts.add(self);
             if (st.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
                 BlockPos other = n.relative(ChestBlock.getConnectedDirection(st));
+                if (!level.isLoaded(other)) return; // half a double chest; wait until both halves load
                 seen.add(other);
                 if (level.getBlockEntity(other) instanceof BlockEntity otherBe) parts.add(otherBe);
             }
@@ -137,6 +146,14 @@ public class ConduitInventorySource implements InventorySource {
      * chunk unloaded). Without this, a chest broken between scans drops its items while the
      * terminal can still extract the same items from the stale reference — a duplication exploit.
      */
+    @Override
+    public boolean isStale() {
+        for (Entry e : cached) {
+            if (!e.isValid()) return true;
+        }
+        return false;
+    }
+
     @Override
     public List<Container> getInventories() {
         List<Container> result = new ArrayList<>(cached.size());

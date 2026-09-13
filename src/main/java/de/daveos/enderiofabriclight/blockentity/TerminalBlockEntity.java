@@ -1,8 +1,8 @@
 package de.daveos.enderiofabriclight.blockentity;
 
-import de.daveos.enderiofabriclight.EnderIOFabricLight;
 import de.daveos.enderiofabriclight.inventory.ConduitInventorySource;
 import de.daveos.enderiofabriclight.inventory.InventorySource;
+import de.daveos.enderiofabriclight.inventory.NetworkVersion;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.minecraft.core.BlockPos;
@@ -26,8 +26,11 @@ import net.minecraft.world.level.storage.ValueOutput;
 import java.util.List;
 
 public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProvider<BlockPos> {
-    /** How often the terminal rescans the network. 20 ticks = once per second. */
-    private static final int SCAN_INTERVAL_TICKS = 20;
+    /**
+     * Fallback rescan interval. Normally the terminal rescans only when {@link NetworkVersion} changed
+     * or a cached container became invalid; this catches the rest (e.g. chunks loading back in).
+     */
+    private static final int FULL_RESCAN_TICKS = 100;
 
     /** Return area layout: 5 columns × 2 rows = 10 buffer slots (horizontal strip on the left). */
     public static final int RETURN_COLS = 5;
@@ -57,8 +60,8 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
         }
     };
 
-    private int tickCounter = 0;
-    private int lastReportedCount = -1;
+    private int ticksSinceScan = FULL_RESCAN_TICKS;
+    private long scannedVersion = -1;
 
     public TerminalBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TERMINAL, pos, state);
@@ -66,17 +69,11 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
 
     /** Called from the {@link net.minecraft.world.level.block.entity.BlockEntityTicker} on server side only. */
     public void serverTick(Level level, BlockPos pos, BlockState state) {
-        // Rescan the surrounding inventories on the slower interval.
-        if (++tickCounter >= SCAN_INTERVAL_TICKS) {
-            tickCounter = 0;
-
+        long version = NetworkVersion.get();
+        if (version != scannedVersion || ++ticksSinceScan >= FULL_RESCAN_TICKS || inventorySource.isStale()) {
+            ticksSinceScan = 0;
+            scannedVersion = version;
             inventorySource.update(level, pos);
-
-            int count = inventorySource.getInventories().size();
-            if (count != lastReportedCount) {
-                EnderIOFabricLight.LOGGER.info("Terminal at {} sees {} inventories.", pos, count);
-                lastReportedCount = count;
-            }
         }
 
         // Drain the return area every tick so items flow promptly when the player drops something in.

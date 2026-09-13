@@ -38,6 +38,11 @@ public interface InventorySource {
      */
     List<Container> getInventories();
 
+    /** Whether the cached list references containers that have since been removed or unloaded. */
+    default boolean isStale() {
+        return false;
+    }
+
     /** Whether the terminal may treat this block entity as storage: a container whose block is in {@link #STORAGE}. */
     static boolean isAllowedInventory(BlockEntity be) {
         return be instanceof Container && be.getBlockState().is(STORAGE);

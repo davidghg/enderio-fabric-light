@@ -3,6 +3,8 @@ package de.daveos.enderiofabriclight.block;
 import com.mojang.serialization.MapCodec;
 import de.daveos.enderiofabriclight.blockentity.ConduitBlockEntity;
 import de.daveos.enderiofabriclight.inventory.InventorySource;
+import de.daveos.enderiofabriclight.inventory.NetworkVersion;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -121,6 +123,7 @@ public class ConduitBlock extends Block implements EntityBlock {
             state = state.setValue(PROPERTY_BY_DIRECTION.get(dir),
                 connectionTo(level, neighbor, level.getBlockState(neighbor), dir));
         }
+        NetworkVersion.bump();
         return state;
     }
 
@@ -130,7 +133,15 @@ public class ConduitBlock extends Block implements EntityBlock {
                                      BlockState neighborState, RandomSource random) {
         EnumProperty<ConduitConnection> prop = PROPERTY_BY_DIRECTION.get(direction);
         if (state.getValue(prop) == ConduitConnection.DISABLED) return state;
-        return state.setValue(prop, connectionTo(level, neighborPos, neighborState, direction));
+        BlockState updated = state.setValue(prop, connectionTo(level, neighborPos, neighborState, direction));
+        if (updated != state) NetworkVersion.bump();
+        return updated;
+    }
+
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        NetworkVersion.bump();
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     /**
@@ -159,6 +170,7 @@ public class ConduitBlock extends Block implements EntityBlock {
     public static boolean toggleSide(Level level, BlockPos pos, BlockState state, Direction dir) {
         EnumProperty<ConduitConnection> prop = PROPERTY_BY_DIRECTION.get(dir);
         ConduitConnection current = state.getValue(prop);
+        NetworkVersion.bump();
         BlockPos neighborPos = pos.relative(dir);
         BlockState neighbor = level.getBlockState(neighborPos);
 
