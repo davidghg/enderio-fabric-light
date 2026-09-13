@@ -1,5 +1,6 @@
 package de.daveos.enderiofabriclight.block;
 
+import com.mojang.serialization.MapCodec;
 import de.daveos.enderiofabriclight.blockentity.ModBlockEntities;
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -8,19 +9,45 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
-public class TerminalBlock extends HorizontalDirectionalBlock implements EntityBlock {
-    public static final com.mojang.serialization.MapCodec<TerminalBlock> CODEC = simpleCodec(TerminalBlock::new);
+import java.util.EnumMap;
+import java.util.Map;
+
+/**
+ * The terminal: a thin wall/floor/ceiling panel, like Ender IO's Inventory Panel.
+ * {@code FACING} is the direction the screen looks; the panel's back sits flush against the
+ * block on the opposite side.
+ */
+public class TerminalBlock extends DirectionalBlock implements EntityBlock {
+    public static final MapCodec<TerminalBlock> CODEC = simpleCodec(TerminalBlock::new);
+
+    /** Panel thickness in pixels. Must match the element depth in models/block/terminal.json. */
+    private static final int THICKNESS = 3;
+
+    private static final Map<Direction, VoxelShape> SHAPES = new EnumMap<>(Direction.class);
+    static {
+        int t = THICKNESS;
+        SHAPES.put(Direction.NORTH, Block.box(0, 0, 16 - t, 16, 16, 16));
+        SHAPES.put(Direction.SOUTH, Block.box(0, 0, 0, 16, 16, t));
+        SHAPES.put(Direction.EAST,  Block.box(0, 0, 0, t, 16, 16));
+        SHAPES.put(Direction.WEST,  Block.box(16 - t, 0, 0, 16, 16, 16));
+        SHAPES.put(Direction.UP,    Block.box(0, 0, 0, 16, t, 16));
+        SHAPES.put(Direction.DOWN,  Block.box(0, 16 - t, 0, 16, 16, 16));
+    }
 
     public TerminalBlock(Properties properties) {
         super(properties);
@@ -28,18 +55,24 @@ public class TerminalBlock extends HorizontalDirectionalBlock implements EntityB
     }
 
     @Override
-    protected com.mojang.serialization.MapCodec<? extends HorizontalDirectionalBlock> codec() {
+    protected MapCodec<? extends DirectionalBlock> codec() {
         return CODEC;
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        // Mount on the clicked face, screen pointing back at the player.
+        return this.defaultBlockState().setValue(FACING, context.getClickedFace());
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPES.get(state.getValue(FACING));
     }
 
     // --- EntityBlock --------------------------------------------------------

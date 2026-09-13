@@ -22,7 +22,8 @@ public final class ModBlocks {
         TerminalBlock::new,
         BlockBehaviour.Properties.of()
             .strength(3.0f, 6.0f)
-            .sound(SoundType.METAL),
+            .sound(SoundType.METAL)
+            .noOcclusion(),  // thin panel — must not hide neighbouring block faces
         true
     );
 

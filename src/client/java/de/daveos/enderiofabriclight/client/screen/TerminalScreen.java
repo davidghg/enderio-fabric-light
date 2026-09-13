@@ -102,7 +102,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private String filter = "";
     private EditBox search;
     private Button sortButton;
-    private SortMode sortMode = SortMode.COUNT;
+    private SortMode sortMode = SortMode.NAME;
     /** How many grid rows we've scrolled past (0 = top). */
     private int scrollRow = 0;
 
