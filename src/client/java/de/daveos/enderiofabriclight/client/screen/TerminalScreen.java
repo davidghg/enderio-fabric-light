@@ -365,7 +365,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 int index = scrollRow * GRID_COLS + cell;
                 if (index < view.size()) {
                     ItemStack template = view.get(index);
-                    int amount = (button == 1) ? template.getMaxStackSize() : 1;
+                    // Like a chest: left = full stack, right = half of what a stack would be.
+                    int fullStack = Math.min(template.getCount(), template.getMaxStackSize());
+                    int amount = (button == 0 || event.hasShiftDown()) ? fullStack : Math.max(1, (fullStack + 1) / 2);
                     ClientPlayNetworking.send(new TerminalTakePayload(
                         template.copyWithCount(1), amount, event.hasShiftDown()));
                 }

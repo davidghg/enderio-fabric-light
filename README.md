@@ -25,9 +25,9 @@ block to hang on and pops off otherwise.
 
 | Action | Result |
 | --- | --- |
-| Left-click an item | take one |
-| Right-click an item | take a stack |
-| Shift + click an item | take into your inventory |
+| Left-click an item | take a stack (then click or drag it into the crafting grid) |
+| Right-click an item | take half a stack |
+| Shift + click an item | take a stack into your inventory |
 | Click the grid while holding items | store them (left: stack, right: one) |
 | Drop items into the return area | stored automatically |
 | Craft in the 3×3 grid | used ingredients are refilled from storage; shift-click the result to craft repeatedly |
