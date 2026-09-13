@@ -5,8 +5,6 @@
     "glass": "enderio-fabric-light:block/conduit_glass",
     "energy": "enderio-fabric-light:block/conduit_energy",
     "frame": "enderio-fabric-light:block/conduit_frame",
-    "accent": "enderio-fabric-light:block/conduit_accent",
-    "plug": "enderio-fabric-light:block/conduit_plug",
     "glow": "enderio-fabric-light:block/conduit_plug_glow",
     "particle": "enderio-fabric-light:block/conduit_frame"
   },

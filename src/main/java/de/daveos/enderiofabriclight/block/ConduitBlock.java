@@ -52,7 +52,7 @@ public class ConduitBlock extends Block implements EntityBlock {
     static {
         for (Direction dir : Direction.values()) {
             ARM.put(dir, towards(dir, 6, 10, 0, 6));
-            PLATE.put(dir, towards(dir, 3, 13, 0, 2));
+            PLATE.put(dir, towards(dir, 4, 12, 0, 1));
         }
     }
 

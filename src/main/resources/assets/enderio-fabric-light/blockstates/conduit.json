@@ -110,7 +110,7 @@
         ]
       },
       "apply": {
-        "model": "enderio-fabric-light:block/conduit/cage"
+        "model": "enderio-fabric-light:block/conduit/hub"
       }
     },
     {
