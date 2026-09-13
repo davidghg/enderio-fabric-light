@@ -114,7 +114,50 @@ public class TerminalMenu extends AbstractContainerMenu {
                 this.addSlot(new Slot(craftSlots, col + row * 3, CRAFT_X + col * 18, CRAFT_Y + row * 18));
             }
         }
-        this.addSlot(new ResultSlot(owningPlayer, craftSlots, resultSlots, 0, RESULT_X, RESULT_Y));
+        this.addSlot(new ResultSlot(owningPlayer, craftSlots, resultSlots, 0, RESULT_X, RESULT_Y) {
+            @Override
+            public void onTake(Player player, ItemStack stack) {
+                // Remember what each input held, let vanilla consume one of each, then top the
+                // consumed slots back up from storage. This is also what makes shift-click craft
+                // repeatedly: vanilla keeps quick-moving while the result slot stays filled.
+                ItemStack[] before = new ItemStack[craftSlots.getContainerSize()];
+                for (int i = 0; i < before.length; i++) {
+                    before[i] = craftSlots.getItem(i).copyWithCount(1);
+                }
+                super.onTake(player, stack);
+                refillCraftingGrid(before);
+            }
+        });
+    }
+
+    private void refillCraftingGrid(ItemStack[] before) {
+        this.access.execute((level, pos) -> {
+            if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;
+            for (int i = 0; i < before.length; i++) {
+                // Only refill slots that were emptied; a recipe remainder (e.g. a bucket) stays put.
+                if (before[i].isEmpty() || !craftSlots.getItem(i).isEmpty()) continue;
+                ItemStack refill = terminal.extractFromNetwork(before[i], 1);
+                if (!refill.isEmpty()) craftSlots.setItem(i, refill);
+            }
+        });
+    }
+
+    /** Server-side handler for {@code TerminalClearGridPayload}: moves the crafting inputs into storage. */
+    public void clearCraftingGrid(ServerPlayer player) {
+        if (!stillValid(player)) return;
+        this.access.execute((level, pos) -> {
+            if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;
+            for (int i = 0; i < craftSlots.getContainerSize(); i++) {
+                ItemStack stack = craftSlots.getItem(i);
+                if (stack.isEmpty()) continue;
+                ItemStack remainder = terminal.insertIntoNetwork(stack.copy());
+                if (!remainder.isEmpty() && !player.getInventory().add(remainder)) {
+                    player.drop(remainder, false);
+                }
+                craftSlots.setItem(i, ItemStack.EMPTY);
+            }
+            broadcastChanges();
+        });
     }
 
     private void addReturnArea() {
@@ -278,22 +321,9 @@ public class TerminalMenu extends AbstractContainerMenu {
                 amount = Math.min(amount, cursorRoom);
             }
 
-            int taken = 0;
-            outer:
-            for (Container container : terminal.getInventorySource().getInventories()) {
-                for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                    ItemStack inSlot = container.getItem(slot);
-                    if (inSlot.isEmpty() || !ItemStack.isSameItemSameComponents(inSlot, template)) continue;
-                    int take = Math.min(amount - taken, inSlot.getCount());
-                    inSlot.shrink(take);
-                    container.setChanged();
-                    taken += take;
-                    if (taken >= amount) break outer;
-                }
-            }
-            if (taken == 0) return;
-
-            ItemStack result = template.copyWithCount(taken);
+            ItemStack result = terminal.extractFromNetwork(template, amount);
+            if (result.isEmpty()) return;
+            int taken = result.getCount();
 
             if (toInventory) {
                 if (!player.getInventory().add(result)) {

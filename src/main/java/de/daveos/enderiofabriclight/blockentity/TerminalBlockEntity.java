@@ -151,6 +151,23 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
         return distributeStack(stack, inventorySource.getInventories());
     }
 
+    /** Removes up to {@code amount} items matching {@code template} from connected storage and returns them. */
+    public ItemStack extractFromNetwork(ItemStack template, int amount) {
+        int taken = 0;
+        for (Container container : inventorySource.getInventories()) {
+            for (int slot = 0; slot < container.getContainerSize() && taken < amount; slot++) {
+                ItemStack inSlot = container.getItem(slot);
+                if (inSlot.isEmpty() || !ItemStack.isSameItemSameComponents(inSlot, template)) continue;
+                int take = Math.min(amount - taken, inSlot.getCount());
+                inSlot.shrink(take);
+                container.setChanged();
+                taken += take;
+            }
+            if (taken >= amount) break;
+        }
+        return taken == 0 ? ItemStack.EMPTY : template.copyWithCount(taken);
+    }
+
     public InventorySource getInventorySource() {
         return inventorySource;
     }

@@ -2,6 +2,7 @@ package de.daveos.enderiofabriclight.client.screen;
 
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
+import de.daveos.enderiofabriclight.network.TerminalClearGridPayload;
 import de.daveos.enderiofabriclight.network.TerminalDepositPayload;
 import de.daveos.enderiofabriclight.network.TerminalTakePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -45,6 +46,11 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private static final int SORT_X = SCROLLBAR_X + SCROLLBAR_W - SORT_W;
     private static final int SEARCH_X = GRID_X - 1;
     private static final int SEARCH_W = SORT_X - 3 - SEARCH_X;
+
+    // "Clear crafting grid" button, centred under the result well.
+    private static final int CLEAR_SIZE = 12;
+    private static final int CLEAR_X = RESULT_X + 8 - CLEAR_SIZE / 2;
+    private static final int CLEAR_Y = RESULT_Y + 26;
 
     // Divider between left column and item grid.
     private static final int DIVIDER_X = GRID_X - 4;
@@ -130,6 +136,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
         drawArrow(g, x0 + CRAFT_X + 3 * CELL + 3, y0 + RESULT_Y + 5);
         drawResultWell(g, x0 + RESULT_X - 5, y0 + RESULT_Y - 5);
+        boolean clearHover = isOver(mouseX, mouseY, CLEAR_X, CLEAR_Y, CLEAR_SIZE, CLEAR_SIZE);
+        drawField(g, x0 + CLEAR_X, y0 + CLEAR_Y, CLEAR_SIZE, CLEAR_SIZE, clearHover ? C_ACCENT : C_SLOT_BOT);
+        drawCross(g, x0 + CLEAR_X + 3, y0 + CLEAR_Y + 3, clearHover ? C_ACCENT : C_TEXT_DIM);
 
         g.fill(x0 + CRAFT_X - 1, y0 + RETURN_Y - 10, x0 + DIVIDER_X - 3, y0 + RETURN_Y - 9, C_BG_LIGHT);
         for (int row = 0; row < TerminalBlockEntity.RETURN_ROWS; row++) {
@@ -245,6 +254,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             g.setTooltipForNextFrame(this.font, Component.translatable(sortMode.tooltipKey), mouseX, mouseY);
             return;
         }
+        if (isOver(mouseX, mouseY, CLEAR_X, CLEAR_Y, CLEAR_SIZE, CLEAR_SIZE)) {
+            g.setTooltipForNextFrame(this.font, Component.translatable("gui.enderio-fabric-light.clear_grid"), mouseX, mouseY);
+            return;
+        }
 
         if (this.hoveredSlot != null && !this.hoveredSlot.hasItem() && this.menu.getCarried().isEmpty()
                 && TerminalMenu.isReturnSlot(this.hoveredSlot.index)) {
@@ -314,6 +327,11 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         if (button == 0 && isOver(event.x(), event.y(), SORT_X, HEADER_Y, SORT_W, HEADER_H)) {
             this.sortMode = this.sortMode.next();
             this.scrollRow = 0;
+            return true;
+        }
+
+        if (button == 0 && isOver(event.x(), event.y(), CLEAR_X, CLEAR_Y, CLEAR_SIZE, CLEAR_SIZE)) {
+            ClientPlayNetworking.send(new TerminalClearGridPayload());
             return true;
         }
 
@@ -403,6 +421,14 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private static void drawField(GuiGraphicsExtractor g, int x, int y, int w, int h, int border) {
         g.fill(x, y, x + w, y + h, border);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, C_SLOT);
+    }
+
+    /** 6×6 diagonal cross. */
+    private static void drawCross(GuiGraphicsExtractor g, int x, int y, int color) {
+        for (int i = 0; i < 6; i++) {
+            g.fill(x + i, y + i, x + i + 1, y + i + 1, color);
+            g.fill(x + 5 - i, y + i, x + 6 - i, y + i + 1, color);
+        }
     }
 
     /** 8×7 right-pointing chevron arrow. */

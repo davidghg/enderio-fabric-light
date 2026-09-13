@@ -43,6 +43,20 @@ public final class ModNetworking {
             });
         });
 
+        // C2S: clear crafting grid into storage.
+        PayloadTypeRegistry.serverboundPlay().register(
+            TerminalClearGridPayload.TYPE,
+            TerminalClearGridPayload.STREAM_CODEC
+        );
+        ServerPlayNetworking.registerGlobalReceiver(TerminalClearGridPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.containerMenu instanceof TerminalMenu menu) {
+                    menu.clearCraftingGrid(player);
+                }
+            });
+        });
+
         // C2S handler — runs on the network thread, so we hop to the server's main thread before
         // mutating any container or player inventory state.
         ServerPlayNetworking.registerGlobalReceiver(TerminalTakePayload.TYPE, (payload, context) -> {
