@@ -1,6 +1,7 @@
 package de.daveos.enderiofabriclight.client.screen;
 
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
+import de.daveos.enderiofabriclight.client.TerminalClientSettings;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
 import de.daveos.enderiofabriclight.network.TerminalClearGridPayload;
 import de.daveos.enderiofabriclight.network.TerminalDepositPayload;
@@ -80,14 +81,23 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         SortMode next() { return this == NAME ? COUNT : NAME; }
     }
 
-    private String filter = "";
+    private String filter = TerminalClientSettings.getSearch().toLowerCase(Locale.ROOT);
     private EditBox search;
-    private SortMode sortMode = SortMode.NAME;
+    private SortMode sortMode = loadSortMode();
     /** How many grid rows we've scrolled past (0 = top). */
     private int scrollRow = 0;
+    private boolean draggingScrollbar = false;
 
     public TerminalScreen(TerminalMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, IMAGE_W, IMAGE_H);
+    }
+
+    private static SortMode loadSortMode() {
+        try {
+            return SortMode.valueOf(TerminalClientSettings.getSort(SortMode.NAME.name()));
+        } catch (IllegalArgumentException e) {
+            return SortMode.NAME;
+        }
     }
 
     @Override
@@ -104,8 +114,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         this.search.setTextColor(C_TEXT);
         this.search.setMaxLength(50);
         this.search.setHint(Component.translatable("gui.enderio-fabric-light.search").withColor(C_TEXT_DIM));
-        this.search.setValue(this.filter);
+        this.search.setValue(TerminalClientSettings.getSearch());
         this.search.setResponder(text -> {
+            TerminalClientSettings.setSearch(text);
             this.filter = text.toLowerCase(Locale.ROOT);
             this.scrollRow = 0;
         });
@@ -326,7 +337,14 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
         if (button == 0 && isOver(event.x(), event.y(), SORT_X, HEADER_Y, SORT_W, HEADER_H)) {
             this.sortMode = this.sortMode.next();
+            TerminalClientSettings.setSort(this.sortMode.name());
             this.scrollRow = 0;
+            return true;
+        }
+
+        if (button == 0 && isOver(event.x(), event.y(), SCROLLBAR_X, GRID_Y - 1, SCROLLBAR_W, GRID_ROWS * CELL)) {
+            this.draggingScrollbar = true;
+            scrollToMouse(event.y());
             return true;
         }
 
@@ -365,6 +383,36 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             return true;
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (this.draggingScrollbar) {
+            scrollToMouse(event.y());
+            return true;
+        }
+        return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (event.button() == 0 && this.draggingScrollbar) {
+            this.draggingScrollbar = false;
+            return true;
+        }
+        return super.mouseReleased(event);
+    }
+
+    /** Positions the scrollbar thumb centred on the mouse, matching the geometry in {@link #drawScrollbar}. */
+    private void scrollToMouse(double mouseY) {
+        int total = totalRows();
+        int max = total - GRID_ROWS;
+        if (max <= 0) return;
+        int trackH = GRID_ROWS * CELL;
+        int thumbH = Math.max(10, trackH * GRID_ROWS / total);
+        double trackTop = this.topPos + GRID_Y - 1;
+        double fraction = (mouseY - trackTop - thumbH / 2.0) / (trackH - thumbH);
+        this.scrollRow = Mth.clamp((int) Math.round(fraction * max), 0, max);
     }
 
     @Override
