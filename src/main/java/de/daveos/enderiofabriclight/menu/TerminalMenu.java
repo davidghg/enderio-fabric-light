@@ -250,16 +250,13 @@ public class TerminalMenu extends AbstractContainerMenu {
         return AbstractContainerMenu.stillValid(this.access, player, ModBlocks.TERMINAL);
     }
 
-    // --- Take (4d) with click-swap (4e+) ------------------------------------
+    // --- Take / deposit ------------------------------------------------------
 
     /**
      * Server-side handler for {@code TerminalTakePayload}. Pulls up to {@code requestedAmount}
      * items matching {@code template} from the terminal's reachable containers and delivers them
-     * either to the player's cursor or directly into their inventory.
-     *
-     * <p>Click-swap: if the cursor already holds a <em>different</em> item, we deposit that into
-     * the return area first (BE tick will redistribute it), then pick up the new one. If the
-     * deposit can't be made in full, we abort and don't take anything new.
+     * either to the player's cursor (only if it is empty or holds the same item) or directly into
+     * their inventory.
      */
     public void tryTake(ServerPlayer player, ItemStack template, int requestedAmount, boolean toInventory) {
         if (template.isEmpty() || requestedAmount <= 0) return;
@@ -275,16 +272,7 @@ public class TerminalMenu extends AbstractContainerMenu {
 
             if (!toInventory) {
                 ItemStack cursor = this.getCarried();
-                if (!cursor.isEmpty() && !ItemStack.isSameItemSameComponents(cursor, template)) {
-                    // Click-swap: try to park the cursor stack in the return area first.
-                    ItemStack leftover = depositToReturnArea(cursor.copy());
-                    if (!leftover.isEmpty()) {
-                        // Return area couldn't absorb everything — abort to avoid losing items.
-                        return;
-                    }
-                    this.setCarried(ItemStack.EMPTY);
-                    cursor = ItemStack.EMPTY;
-                }
+                if (!cursor.isEmpty() && !ItemStack.isSameItemSameComponents(cursor, template)) return;
                 int cursorRoom = template.getMaxStackSize() - cursor.getCount();
                 if (cursorRoom <= 0) return;
                 amount = Math.min(amount, cursorRoom);
@@ -325,32 +313,28 @@ public class TerminalMenu extends AbstractContainerMenu {
         });
     }
 
-    /** Hopper-style insert into the return-area container. Returns leftover (empty if all fit). */
-    private ItemStack depositToReturnArea(ItemStack stack) {
-        // Merge into matching existing stacks first.
-        for (int i = 0; i < returnAreaContainer.getContainerSize(); i++) {
-            if (stack.isEmpty()) return stack;
-            ItemStack existing = returnAreaContainer.getItem(i);
-            if (existing.isEmpty()) continue;
-            if (!ItemStack.isSameItemSameComponents(existing, stack)) continue;
-            int cap = Math.min(existing.getMaxStackSize(), returnAreaContainer.getMaxStackSize());
-            int room = cap - existing.getCount();
-            if (room <= 0) continue;
-            int move = Math.min(room, stack.getCount());
-            existing.grow(move);
-            stack.shrink(move);
-            returnAreaContainer.setChanged();
-        }
-        // Fill empty slots.
-        for (int i = 0; i < returnAreaContainer.getContainerSize(); i++) {
-            if (stack.isEmpty()) return stack;
-            if (!returnAreaContainer.getItem(i).isEmpty()) continue;
-            int cap = Math.min(stack.getMaxStackSize(), returnAreaContainer.getMaxStackSize());
-            int move = Math.min(cap, stack.getCount());
-            returnAreaContainer.setItem(i, stack.copyWithCount(move));
-            stack.shrink(move);
-        }
-        return stack;
+    /**
+     * Server-side handler for {@code TerminalDepositPayload}: stores the cursor stack (or a single
+     * item of it) straight into the network. Whatever doesn't fit stays on the cursor.
+     */
+    public void tryDeposit(ServerPlayer player, boolean single) {
+        if (!stillValid(player)) return;
+        ItemStack cursor = this.getCarried();
+        if (cursor.isEmpty()) return;
+
+        this.access.execute((level, pos) -> {
+            if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;
+
+            int offered = single ? 1 : cursor.getCount();
+            ItemStack remainder = terminal.insertIntoNetwork(cursor.copyWithCount(offered));
+            int stored = offered - remainder.getCount();
+            if (stored == 0) return;
+
+            cursor.shrink(stored);
+            this.setCarried(cursor.isEmpty() ? ItemStack.EMPTY : cursor);
+            super.broadcastChanges();
+            syncView();
+        });
     }
 
     // --- Sync ---------------------------------------------------------------

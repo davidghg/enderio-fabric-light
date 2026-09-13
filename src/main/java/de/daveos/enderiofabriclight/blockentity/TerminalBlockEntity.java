@@ -146,6 +146,11 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
         return stack;
     }
 
+    /** Inserts into the connected storage; mutates and returns the stack as the part that didn't fit. */
+    public ItemStack insertIntoNetwork(ItemStack stack) {
+        return distributeStack(stack, inventorySource.getInventories());
+    }
+
     public InventorySource getInventorySource() {
         return inventorySource;
     }

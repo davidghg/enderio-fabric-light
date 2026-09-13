@@ -29,6 +29,20 @@ public final class ModNetworking {
             TerminalTakePayload.STREAM_CODEC
         );
 
+        // C2S: player clicked the grid while holding items.
+        PayloadTypeRegistry.serverboundPlay().register(
+            TerminalDepositPayload.TYPE,
+            TerminalDepositPayload.STREAM_CODEC
+        );
+        ServerPlayNetworking.registerGlobalReceiver(TerminalDepositPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.containerMenu instanceof TerminalMenu menu) {
+                    menu.tryDeposit(player, payload.single());
+                }
+            });
+        });
+
         // C2S handler — runs on the network thread, so we hop to the server's main thread before
         // mutating any container or player inventory state.
         ServerPlayNetworking.registerGlobalReceiver(TerminalTakePayload.TYPE, (payload, context) -> {

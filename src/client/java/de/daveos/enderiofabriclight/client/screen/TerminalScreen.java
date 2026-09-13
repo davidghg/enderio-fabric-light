@@ -2,6 +2,7 @@ package de.daveos.enderiofabriclight.client.screen;
 
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
+import de.daveos.enderiofabriclight.network.TerminalDepositPayload;
 import de.daveos.enderiofabriclight.network.TerminalTakePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
@@ -318,6 +319,11 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
         if (button == 0 || button == 1) {
             int cell = hoveredGridCell(event.x(), event.y());
+            if (cell >= 0 && !this.menu.getCarried().isEmpty()) {
+                // Holding items: store them. Left = whole stack, right = one item.
+                ClientPlayNetworking.send(new TerminalDepositPayload(button == 1));
+                return true;
+            }
             if (cell >= 0) {
                 List<ItemStack> view = displayList();
                 int index = scrollRow * GRID_COLS + cell;
