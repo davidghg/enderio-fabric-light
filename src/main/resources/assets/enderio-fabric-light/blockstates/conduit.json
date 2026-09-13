@@ -1,11 +1,261 @@
 {
   "multipart": [
-    { "apply": { "model": "enderio-fabric-light:block/conduit" } },
-    { "when": { "north": "true" }, "apply": { "model": "enderio-fabric-light:block/conduit_arm" } },
-    { "when": { "east": "true" },  "apply": { "model": "enderio-fabric-light:block/conduit_arm", "y": 90 } },
-    { "when": { "south": "true" }, "apply": { "model": "enderio-fabric-light:block/conduit_arm", "y": 180 } },
-    { "when": { "west": "true" },  "apply": { "model": "enderio-fabric-light:block/conduit_arm", "y": 270 } },
-    { "when": { "up": "true" },    "apply": { "model": "enderio-fabric-light:block/conduit_arm", "x": 270 } },
-    { "when": { "down": "true" },  "apply": { "model": "enderio-fabric-light:block/conduit_arm", "x": 90 } }
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "pipe|plug",
+            "west": "pipe|plug"
+          },
+          {
+            "north": "pipe|plug",
+            "east": "pipe|plug"
+          },
+          {
+            "south": "pipe|plug",
+            "west": "pipe|plug"
+          },
+          {
+            "south": "pipe|plug",
+            "east": "pipe|plug"
+          },
+          {
+            "north": "pipe|plug",
+            "down": "pipe|plug"
+          },
+          {
+            "north": "pipe|plug",
+            "up": "pipe|plug"
+          },
+          {
+            "south": "pipe|plug",
+            "down": "pipe|plug"
+          },
+          {
+            "south": "pipe|plug",
+            "up": "pipe|plug"
+          },
+          {
+            "west": "pipe|plug",
+            "down": "pipe|plug"
+          },
+          {
+            "west": "pipe|plug",
+            "up": "pipe|plug"
+          },
+          {
+            "east": "pipe|plug",
+            "down": "pipe|plug"
+          },
+          {
+            "east": "pipe|plug",
+            "up": "pipe|plug"
+          },
+          {
+            "north": "none",
+            "south": "none",
+            "west": "none",
+            "east": "none",
+            "down": "none",
+            "up": "none"
+          },
+          {
+            "north": "pipe|plug",
+            "south": "none",
+            "west": "none",
+            "east": "none",
+            "down": "none",
+            "up": "none"
+          },
+          {
+            "north": "none",
+            "south": "pipe|plug",
+            "west": "none",
+            "east": "none",
+            "down": "none",
+            "up": "none"
+          },
+          {
+            "north": "none",
+            "south": "none",
+            "west": "pipe|plug",
+            "east": "none",
+            "down": "none",
+            "up": "none"
+          },
+          {
+            "north": "none",
+            "south": "none",
+            "west": "none",
+            "east": "pipe|plug",
+            "down": "none",
+            "up": "none"
+          },
+          {
+            "north": "none",
+            "south": "none",
+            "west": "none",
+            "east": "none",
+            "down": "pipe|plug",
+            "up": "none"
+          },
+          {
+            "north": "none",
+            "south": "none",
+            "west": "none",
+            "east": "none",
+            "down": "none",
+            "up": "pipe|plug"
+          }
+        ]
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/cage"
+      }
+    },
+    {
+      "when": {
+        "north": "none"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/none_north"
+      }
+    },
+    {
+      "when": {
+        "north": "pipe"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/pipe_north"
+      }
+    },
+    {
+      "when": {
+        "north": "plug"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/plug_north"
+      }
+    },
+    {
+      "when": {
+        "south": "none"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/none_south"
+      }
+    },
+    {
+      "when": {
+        "south": "pipe"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/pipe_south"
+      }
+    },
+    {
+      "when": {
+        "south": "plug"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/plug_south"
+      }
+    },
+    {
+      "when": {
+        "west": "none"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/none_west"
+      }
+    },
+    {
+      "when": {
+        "west": "pipe"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/pipe_west"
+      }
+    },
+    {
+      "when": {
+        "west": "plug"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/plug_west"
+      }
+    },
+    {
+      "when": {
+        "east": "none"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/none_east"
+      }
+    },
+    {
+      "when": {
+        "east": "pipe"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/pipe_east"
+      }
+    },
+    {
+      "when": {
+        "east": "plug"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/plug_east"
+      }
+    },
+    {
+      "when": {
+        "down": "none"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/none_down"
+      }
+    },
+    {
+      "when": {
+        "down": "pipe"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/pipe_down"
+      }
+    },
+    {
+      "when": {
+        "down": "plug"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/plug_down"
+      }
+    },
+    {
+      "when": {
+        "up": "none"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/none_up"
+      }
+    },
+    {
+      "when": {
+        "up": "pipe"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/pipe_up"
+      }
+    },
+    {
+      "when": {
+        "up": "plug"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/conduit/plug_up"
+      }
+    }
   ]
 }

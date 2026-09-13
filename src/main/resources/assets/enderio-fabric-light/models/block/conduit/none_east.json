@@ -1,0 +1,63 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "glass": "enderio-fabric-light:block/conduit_glass",
+    "energy": "enderio-fabric-light:block/conduit_energy",
+    "frame": "enderio-fabric-light:block/conduit_frame",
+    "accent": "enderio-fabric-light:block/conduit_accent",
+    "plug": "enderio-fabric-light:block/conduit_plug",
+    "glow": "enderio-fabric-light:block/conduit_plug_glow",
+    "particle": "enderio-fabric-light:block/conduit_frame"
+  },
+  "elements": [
+    {
+      "from": [
+        10,
+        6,
+        6
+      ],
+      "to": [
+        10,
+        10,
+        10
+      ],
+      "faces": {
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        9,
+        7,
+        7
+      ],
+      "to": [
+        9,
+        9,
+        9
+      ],
+      "faces": {
+        "east": {
+          "texture": "#energy",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
+        }
+      },
+      "shade": false,
+      "light_emission": 15
+    }
+  ]
+}
