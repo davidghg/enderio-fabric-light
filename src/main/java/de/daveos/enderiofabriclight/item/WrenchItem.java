@@ -2,6 +2,7 @@ package de.daveos.enderiofabriclight.item;
 
 import de.daveos.enderiofabriclight.block.ConduitBlock;
 import de.daveos.enderiofabriclight.block.ModBlocks;
+import de.daveos.enderiofabriclight.block.PanelBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
@@ -16,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Conduit wrench. Right-click a conduit arm to switch that side off or on; sneak + right-click to
- * pick up a conduit or terminal.
+ * pick up a conduit or panel.
  */
 public class WrenchItem extends Item {
     /** Click offsets beyond the conduit core (half of the 6px hub) count as hitting an arm. */
@@ -34,7 +35,7 @@ public class WrenchItem extends Item {
         boolean isConduit = state.is(ModBlocks.CONDUIT);
         Player player = context.getPlayer();
 
-        if (context.isSecondaryUseActive() && (isConduit || state.is(ModBlocks.TERMINAL))) {
+        if (context.isSecondaryUseActive() && (isConduit || state.getBlock() instanceof PanelBlock)) {
             if (!level.isClientSide()) {
                 level.destroyBlock(pos, player == null || !player.isCreative(), player);
             }

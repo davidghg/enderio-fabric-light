@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
 import net.minecraft.world.SimpleContainer;
@@ -22,8 +21,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-
-import java.util.List;
 
 public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProvider<BlockPos> {
     /**
@@ -81,88 +78,27 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
     }
 
     private void drainReturnArea() {
-        if (returnArea.isEmpty()) return;
-
-        boolean changed = false;
-        List<Container> targets = inventorySource.getInventories();
-        if (targets.isEmpty()) return;
+        if (returnArea.isEmpty() || inventorySource.getInventories().isEmpty()) return;
 
         for (int slot = 0; slot < returnArea.getContainerSize(); slot++) {
             ItemStack stack = returnArea.getItem(slot);
             if (stack.isEmpty()) continue;
 
-            ItemStack before = stack.copy();
-            ItemStack remaining = distributeStack(stack, targets);
-            if (remaining.getCount() != before.getCount()) {
-                returnArea.setItem(slot, remaining);
-                changed = true;
-            }
+            int before = stack.getCount();
+            ItemStack remaining = inventorySource.insert(stack);
+            // setItem on our subclass calls setChanged, so the BE is marked dirty automatically.
+            if (remaining.getCount() != before) returnArea.setItem(slot, remaining);
         }
-        // setItem on our subclass already calls setChanged, so the BE is marked dirty automatically.
-        if (changed) setChanged();
-    }
-
-    /**
-     * Hopper-style insertion: try to merge into existing matching stacks first (across all targets),
-     * then fill empty slots. Mutates the input stack and returns whatever didn't fit anywhere.
-     */
-    private static ItemStack distributeStack(ItemStack stack, List<Container> targets) {
-        // Pass 1: merge with existing matching stacks.
-        for (Container target : targets) {
-            if (stack.isEmpty()) return stack;
-            for (int s = 0; s < target.getContainerSize(); s++) {
-                if (stack.isEmpty()) return stack;
-                ItemStack existing = target.getItem(s);
-                if (existing.isEmpty()) continue;
-                if (!ItemStack.isSameItemSameComponents(existing, stack)) continue;
-                if (!target.canPlaceItem(s, stack)) continue;
-                int cap = Math.min(existing.getMaxStackSize(), target.getMaxStackSize());
-                int room = cap - existing.getCount();
-                if (room <= 0) continue;
-                int move = Math.min(room, stack.getCount());
-                existing.grow(move);
-                stack.shrink(move);
-                target.setChanged();
-            }
-        }
-        // Pass 2: fill empty slots.
-        for (Container target : targets) {
-            if (stack.isEmpty()) return stack;
-            for (int s = 0; s < target.getContainerSize(); s++) {
-                if (stack.isEmpty()) return stack;
-                if (!target.getItem(s).isEmpty()) continue;
-                // Respects container rules, e.g. shulker boxes refuse other shulker boxes.
-                if (!target.canPlaceItem(s, stack)) continue;
-                int cap = Math.min(stack.getMaxStackSize(), target.getMaxStackSize());
-                int move = Math.min(cap, stack.getCount());
-                target.setItem(s, stack.copyWithCount(move));
-                stack.shrink(move);
-                target.setChanged();
-            }
-        }
-        return stack;
     }
 
     /** Inserts into the connected storage; mutates and returns the stack as the part that didn't fit. */
     public ItemStack insertIntoNetwork(ItemStack stack) {
-        return distributeStack(stack, inventorySource.getInventories());
+        return inventorySource.insert(stack);
     }
 
     /** Removes up to {@code amount} items matching {@code template} from connected storage and returns them. */
     public ItemStack extractFromNetwork(ItemStack template, int amount) {
-        int taken = 0;
-        for (Container container : inventorySource.getInventories()) {
-            for (int slot = 0; slot < container.getContainerSize() && taken < amount; slot++) {
-                ItemStack inSlot = container.getItem(slot);
-                if (inSlot.isEmpty() || !ItemStack.isSameItemSameComponents(inSlot, template)) continue;
-                int take = Math.min(amount - taken, inSlot.getCount());
-                inSlot.shrink(take);
-                container.setChanged();
-                taken += take;
-            }
-            if (taken >= amount) break;
-        }
-        return taken == 0 ? ItemStack.EMPTY : template.copyWithCount(taken);
+        return inventorySource.extract(template, amount);
     }
 
     public InventorySource getInventorySource() {

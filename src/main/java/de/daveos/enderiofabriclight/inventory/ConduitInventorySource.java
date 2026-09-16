@@ -3,7 +3,7 @@ package de.daveos.enderiofabriclight.inventory;
 import de.daveos.enderiofabriclight.block.ConduitBlock;
 import de.daveos.enderiofabriclight.block.ConduitConnection;
 import de.daveos.enderiofabriclight.block.ModBlocks;
-import de.daveos.enderiofabriclight.block.TerminalBlock;
+import de.daveos.enderiofabriclight.block.PanelBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
@@ -21,15 +21,15 @@ import java.util.Queue;
 import java.util.Set;
 
 /**
- * Inventory source backed by the conduit network. On each {@link #update}, it looks at the block
- * behind the terminal panel: a storage block there is used directly; a conduit there is
+ * Inventory source backed by the conduit network. On each {@link #update}, it looks at the block on
+ * the panel's network side: a storage block there is used directly; a conduit there is
  * flood-filled and every storage block touching the network is collected.
  *
  * <p>Design note: the network is recomputed on demand (a BFS over the live block layout) rather
  * than maintained as a persistent graph object. That means placing or breaking a conduit needs no
  * merge/split bookkeeping — the next scan simply reflects the new layout. The blocks are already
  * world-persisted, so the network needs no separate save data. The trade-off is a BFS per scan,
- * bounded by {@link #MAX_NODES} and run only on the terminal's slow tick.
+ * bounded by {@link #MAX_NODES} and run only when the network changed.
  */
 public class ConduitInventorySource implements InventorySource {
     /** Safety cap on traversed conduits, so a pathological network can't stall the server tick. */
@@ -48,32 +48,33 @@ public class ConduitInventorySource implements InventorySource {
     private List<Entry> cached = List.of();
 
     @Override
-    public void update(Level level, BlockPos terminalPos) {
-        BlockState terminalState = level.getBlockState(terminalPos);
-        if (!terminalState.is(ModBlocks.TERMINAL)) {
+    public void update(Level level, BlockPos panelPos) {
+        BlockState panelState = level.getBlockState(panelPos);
+        if (!(panelState.getBlock() instanceof PanelBlock panel)) {
             cached = List.of();
             return;
         }
-        // The panel only connects through its back: a conduit or storage block directly behind it.
-        BlockPos back = terminalPos.relative(terminalState.getValue(TerminalBlock.FACING).getOpposite());
+        // A panel connects through exactly one side: a conduit or storage block right there.
+        Direction networkSide = panel.networkSide(panelState);
+        BlockPos entry = panelPos.relative(networkSide);
 
         List<Entry> result = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
-        seen.add(terminalPos);
+        seen.add(panelPos);
 
-        if (!level.isLoaded(back)) {
+        if (!level.isLoaded(entry)) {
             cached = List.of();
             return;
         }
-        BlockState backState = level.getBlockState(back);
-        if (!backState.is(ModBlocks.CONDUIT)) {
-            collectAt(level, back, seen, result);
+        BlockState entryState = level.getBlockState(entry);
+        if (!entryState.is(ModBlocks.CONDUIT)) {
+            collectAt(level, entry, seen, result);
             cached = List.copyOf(result);
             return;
         }
-        // The conduit's side toward the terminal may have been switched off with the wrench.
-        Direction towardTerminal = terminalState.getValue(TerminalBlock.FACING);
-        if (backState.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(towardTerminal)) != ConduitConnection.PLUG) {
+        // The conduit's side toward the panel may have been switched off with the wrench.
+        Direction towardPanel = networkSide.getOpposite();
+        if (entryState.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(towardPanel)) != ConduitConnection.PLUG) {
             cached = List.of();
             return;
         }
@@ -83,12 +84,12 @@ public class ConduitInventorySource implements InventorySource {
         Set<BlockPos> conduits = new HashSet<>();
         List<BlockPos> plugs = new ArrayList<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
-        conduits.add(back);
-        queue.add(back);
+        conduits.add(entry);
+        queue.add(entry);
         while (!queue.isEmpty()) {
             BlockPos c = queue.poll();
             // Never force-load chunks: parts of a network in unloaded chunks are simply skipped
-            // and picked up by the terminal's periodic rescan once they load.
+            // and picked up by the panel's periodic rescan once they load.
             if (!level.isLoaded(c)) continue;
             BlockState cs = level.getBlockState(c);
             if (!cs.is(ModBlocks.CONDUIT)) continue;
