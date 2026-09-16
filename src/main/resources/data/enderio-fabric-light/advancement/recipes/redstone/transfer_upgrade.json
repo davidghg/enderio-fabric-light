@@ -1,0 +1,43 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_import_panel": {
+      "conditions": {
+        "items": [
+          {
+            "items": "enderio-fabric-light:import_panel"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_export_panel": {
+      "conditions": {
+        "items": [
+          {
+            "items": "enderio-fabric-light:export_panel"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "enderio-fabric-light:transfer_upgrade"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_import_panel",
+      "has_export_panel"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "enderio-fabric-light:transfer_upgrade"
+    ]
+  }
+}

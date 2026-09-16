@@ -2,7 +2,8 @@
 
 A small Fabric mod for Minecraft **26.1.2** inspired by Ender IO's Inventory Panel: a terminal
 panel that shows the contents of all connected chests in one searchable list, lets you take and
-store items, and crafts straight from storage. Chests are linked with thin conduits.
+store items, and crafts straight from storage. Chests are linked with thin conduits, and import and
+export panels connect farms and other chests to the system.
 
 This is an independent implementation — it contains no Ender IO code.
 
@@ -40,10 +41,47 @@ Connects the terminal to storage. Conduits link to each other and to chests, tra
 copper chests, barrels and shulker boxes. The list of storage blocks is the block tag
 `enderio-fabric-light:terminal_storage`, so a datapack can extend it.
 
+### Import Panel
+
+Mount it on a storage block (for example a farm's output chest) and dock a conduit onto the socket
+on its **front**. It pulls items out of that chest into the system — never the other way round.
+Right-click to open its settings:
+
+- **Filter** (3×3): click a slot with an item to add it, click with an empty hand to remove it.
+  Nothing is consumed. The filter matches the item type only (damage and enchantments are ignored).
+- **Blacklist** (default): import everything except the filtered items — an empty blacklist imports
+  everything. **Whitelist**: import only the filtered items.
+- **Upgrade slot**: up to 4 transfer upgrades.
+
+### Export Panel
+
+Mount it on a storage block and dock a conduit onto its front. It fills that chest with the filtered
+items from the system. Same settings screen as the import panel, with two modes:
+
+- **Keep in stock** (default): tops each filtered item up to its target amount. The amount is shown
+  in the filter slot; change it with the mouse wheel (±1, with Shift ±16, up to 9999). A new filter
+  entry starts at one stack.
+- **Push all**: moves filtered items in while there is room.
+
+An empty filter exports nothing. A chest with an import or export panel on it never counts as system
+storage, even if a conduit touches it, so items can't loop back to where they came from.
+
+### Transfer Upgrade
+
+Speeds up import and export panels:
+
+| Upgrades | Items per transfer | Interval | Items per second |
+| --- | --- | --- | --- |
+| 0 | 4 | 2 s | 2 |
+| 1 | 16 | 1 s | 16 |
+| 2 | 32 | 1 s | 32 |
+| 3 | 64 | 1 s | 64 |
+| 4 | 64 | 0.5 s | 128 |
+
 ### Conduit Wrench
 
 - Right-click a conduit arm: switch that connection off or on (splits networks).
-- Sneak + right-click a conduit or terminal: pick it up.
+- Sneak + right-click a conduit or panel: pick it up.
 
 ## Recipes
 
@@ -54,6 +92,14 @@ G E G                                   . C .
 I R I                                   . I .
 
 I = iron ingot   G = glass   E = ender pearl   R = redstone   C = copper ingot
+
+Import Panel        Export Panel        Transfer Upgrade
+D Y D               D Y D               D R D
+B H B               B S B               R N R
+I O I               I O I               D R D
+
+D = diamond   Y = eye of ender   B = block of redstone   H = hopper   S = sticky piston
+I = iron ingot   O = conduit   R = redstone   N = netherite scrap
 ```
 
 ## Upgrading from 1.0.x
@@ -68,6 +114,7 @@ changes — break and replace one conduit per line to refresh them.
 ./gradlew build         # jar in build/libs/
 python gen_conduit.py   # regenerate conduit models and textures
 python gen_textures.py  # regenerate terminal and wrench textures
+python gen_panels.py    # regenerate import/export panel and upgrade assets
 ```
 
 ## License
