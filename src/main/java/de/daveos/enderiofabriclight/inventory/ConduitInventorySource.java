@@ -118,6 +118,8 @@ public class ConduitInventorySource implements InventorySource {
 
         BlockState st = level.getBlockState(n);
         if (!st.is(InventorySource.STORAGE)) return;
+        // Inventories used by an import/export panel are that panel's, not network storage.
+        if (PanelBlock.isClaimed(level, n)) return;
 
         if (st.getBlock() instanceof ChestBlock chestBlock) {
             // Treat a double chest as a single 54-slot container, so one conduit touching
@@ -129,6 +131,7 @@ public class ConduitInventorySource implements InventorySource {
                 BlockPos other = n.relative(ChestBlock.getConnectedDirection(st));
                 if (!level.isLoaded(other)) return; // half a double chest; wait until both halves load
                 seen.add(other);
+                if (PanelBlock.isClaimed(level, other)) return;
                 if (level.getBlockEntity(other) instanceof BlockEntity otherBe) parts.add(otherBe);
             }
             Container combined = ChestBlock.getContainer(chestBlock, st, level, n, true);

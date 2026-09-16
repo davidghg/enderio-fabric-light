@@ -4,9 +4,11 @@ import de.daveos.enderiofabriclight.inventory.InventorySource;
 import de.daveos.enderiofabriclight.inventory.NetworkVersion;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
@@ -54,6 +56,40 @@ public abstract class PanelBlock extends DirectionalBlock {
     /** Direction from the panel toward the block it is mounted on. */
     public static Direction backSide(BlockState state) {
         return state.getValue(FACING).getOpposite();
+    }
+
+    /**
+     * Whether this panel takes the inventory it is mounted on for itself (import/export). Such an
+     * inventory never counts as network storage, so items can't loop back into where they came from.
+     */
+    public boolean claimsMount() {
+        return false;
+    }
+
+    /** Whether a panel that {@link #claimsMount() claims its mount} is mounted on {@code pos}. */
+    public static boolean isClaimed(Level level, BlockPos pos) {
+        for (Direction dir : Direction.values()) {
+            BlockPos panelPos = pos.relative(dir);
+            if (!level.isLoaded(panelPos)) continue;
+            BlockState st = level.getBlockState(panelPos);
+            if (st.getBlock() instanceof PanelBlock panel && panel.claimsMount() && backSide(st) == dir.getOpposite()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Placing or removing a panel can claim or release storage, which changes what other panels reach.
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        if (!oldState.is(this)) NetworkVersion.bump();
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+    }
+
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        NetworkVersion.bump();
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     @Override

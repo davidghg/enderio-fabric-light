@@ -13,6 +13,7 @@ public final class ModBlockEntities {
 
     public static BlockEntityType<TerminalBlockEntity> TERMINAL;
     public static BlockEntityType<ConduitBlockEntity> CONDUIT;
+    public static BlockEntityType<ImportPanelBlockEntity> IMPORT_PANEL;
 
     public static void init() {
         TERMINAL = Registry.register(
@@ -24,6 +25,11 @@ public final class ModBlockEntities {
             BuiltInRegistries.BLOCK_ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "conduit"),
             FabricBlockEntityTypeBuilder.create(ConduitBlockEntity::new, ModBlocks.CONDUIT).build()
+        );
+        IMPORT_PANEL = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "import_panel"),
+            FabricBlockEntityTypeBuilder.create(ImportPanelBlockEntity::new, ModBlocks.IMPORT_PANEL).build()
         );
     }
 }

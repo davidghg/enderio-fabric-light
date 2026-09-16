@@ -41,3 +41,6 @@ replay_*.log
 
 .claude
 CLAUDE.md
+
+# Python tooling
+__pycache__/

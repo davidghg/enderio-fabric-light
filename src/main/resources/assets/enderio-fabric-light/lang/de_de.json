@@ -1,6 +1,7 @@
 {
   "block.enderio-fabric-light.terminal": "Terminal",
   "block.enderio-fabric-light.conduit": "Conduit",
+  "block.enderio-fabric-light.import_panel": "Import-Panel",
   "item.enderio-fabric-light.wrench": "Conduit-Schraubenschlüssel",
   "container.enderio-fabric-light.terminal": "Terminal",
   "gui.enderio-fabric-light.search": "Suche…",

@@ -28,6 +28,7 @@ public final class ModItemGroups {
                 .displayItems((context, entries) -> {
                     entries.accept(ModBlocks.TERMINAL);
                     entries.accept(ModBlocks.CONDUIT);
+                    entries.accept(ModBlocks.IMPORT_PANEL);
                     entries.accept(ModItems.WRENCH);
                 })
                 .build()

@@ -9,7 +9,11 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -47,6 +51,26 @@ public interface InventorySource {
     /** Whether the terminal may treat this block entity as storage: a container whose block is in {@link #STORAGE}. */
     static boolean isAllowedInventory(BlockEntity be) {
         return be instanceof Container && be.getBlockState().is(STORAGE);
+    }
+
+    /**
+     * The storage container at {@code pos}, or {@code null} if there is none (or it isn't loaded).
+     * A double chest is returned as one combined container.
+     */
+    @Nullable
+    static Container containerAt(Level level, BlockPos pos) {
+        if (!level.isLoaded(pos)) return null;
+        BlockState st = level.getBlockState(pos);
+        if (!st.is(STORAGE)) return null;
+        if (st.getBlock() instanceof ChestBlock chest) {
+            // Never load the other half's chunk just to build the combined container.
+            if (st.getValue(ChestBlock.TYPE) != ChestType.SINGLE
+                && !level.isLoaded(pos.relative(ChestBlock.getConnectedDirection(st)))) {
+                return null;
+            }
+            return ChestBlock.getContainer(chest, st, level, pos, true);
+        }
+        return level.getBlockEntity(pos) instanceof Container container ? container : null;
     }
 
     /**

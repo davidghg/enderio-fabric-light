@@ -1,8 +1,7 @@
 package de.daveos.enderiofabriclight.blockentity;
 
-import de.daveos.enderiofabriclight.inventory.ConduitInventorySource;
 import de.daveos.enderiofabriclight.inventory.InventorySource;
-import de.daveos.enderiofabriclight.inventory.NetworkVersion;
+import de.daveos.enderiofabriclight.inventory.NetworkLink;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.minecraft.core.BlockPos;
@@ -23,12 +22,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProvider<BlockPos> {
-    /**
-     * Fallback rescan interval. Normally the terminal rescans only when {@link NetworkVersion} changed
-     * or a cached container became invalid; this catches the rest (e.g. chunks loading back in).
-     */
-    private static final int FULL_RESCAN_TICKS = 100;
-
     /** Return area layout: 5 columns × 2 rows = 10 buffer slots (horizontal strip on the left). */
     public static final int RETURN_COLS = 5;
     public static final int RETURN_ROWS = 2;
@@ -37,10 +30,7 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
     /** NBT key for the return-area buffer. */
     private static final String TAG_RETURN_AREA = "ReturnArea";
 
-    // M2: the terminal now reaches inventories through the conduit network instead of a fixed
-    // radius. Swapping this one line is the entire migration — the rest of the terminal is
-    // source-agnostic by design (the whole point of the InventorySource interface).
-    private final InventorySource inventorySource = new ConduitInventorySource();
+    private final NetworkLink network = new NetworkLink();
 
     /**
      * Buffer where the player drops items they want to put away. The server tick drains it
@@ -57,35 +47,27 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
         }
     };
 
-    private int ticksSinceScan = FULL_RESCAN_TICKS;
-    private long scannedVersion = -1;
-
     public TerminalBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TERMINAL, pos, state);
     }
 
     /** Called from the {@link net.minecraft.world.level.block.entity.BlockEntityTicker} on server side only. */
     public void serverTick(Level level, BlockPos pos, BlockState state) {
-        long version = NetworkVersion.get();
-        if (version != scannedVersion || ++ticksSinceScan >= FULL_RESCAN_TICKS || inventorySource.isStale()) {
-            ticksSinceScan = 0;
-            scannedVersion = version;
-            inventorySource.update(level, pos);
-        }
+        network.tick(level, pos);
 
         // Drain the return area every tick so items flow promptly when the player drops something in.
         drainReturnArea();
     }
 
     private void drainReturnArea() {
-        if (returnArea.isEmpty() || inventorySource.getInventories().isEmpty()) return;
+        if (returnArea.isEmpty() || network.source().getInventories().isEmpty()) return;
 
         for (int slot = 0; slot < returnArea.getContainerSize(); slot++) {
             ItemStack stack = returnArea.getItem(slot);
             if (stack.isEmpty()) continue;
 
             int before = stack.getCount();
-            ItemStack remaining = inventorySource.insert(stack);
+            ItemStack remaining = network.source().insert(stack);
             // setItem on our subclass calls setChanged, so the BE is marked dirty automatically.
             if (remaining.getCount() != before) returnArea.setItem(slot, remaining);
         }
@@ -93,16 +75,16 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
 
     /** Inserts into the connected storage; mutates and returns the stack as the part that didn't fit. */
     public ItemStack insertIntoNetwork(ItemStack stack) {
-        return inventorySource.insert(stack);
+        return network.source().insert(stack);
     }
 
     /** Removes up to {@code amount} items matching {@code template} from connected storage and returns them. */
     public ItemStack extractFromNetwork(ItemStack template, int amount) {
-        return inventorySource.extract(template, amount);
+        return network.source().extract(template, amount);
     }
 
     public InventorySource getInventorySource() {
-        return inventorySource;
+        return network.source();
     }
 
     public SimpleContainer getReturnArea() {
