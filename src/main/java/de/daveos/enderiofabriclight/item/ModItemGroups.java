@@ -29,6 +29,7 @@ public final class ModItemGroups {
                     entries.accept(ModBlocks.TERMINAL);
                     entries.accept(ModBlocks.CONDUIT);
                     entries.accept(ModBlocks.IMPORT_PANEL);
+                    entries.accept(ModBlocks.EXPORT_PANEL);
                     entries.accept(ModItems.WRENCH);
                     entries.accept(ModItems.TRANSFER_UPGRADE);
                 })

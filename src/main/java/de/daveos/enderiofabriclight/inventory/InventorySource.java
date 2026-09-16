@@ -2,10 +2,12 @@ package de.daveos.enderiofabriclight.inventory;
 
 import de.daveos.enderiofabriclight.EnderIOFabricLight;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -103,12 +105,16 @@ public interface InventorySource {
         return new ArrayList<>(merged.values());
     }
 
+    /** Inserts into the network's storage; mutates and returns the stack as the part that didn't fit. */
+    default ItemStack insert(ItemStack stack) {
+        return insertInto(getInventories(), stack);
+    }
+
     /**
      * Hopper-style insertion: try to merge into existing matching stacks first (across all
      * containers), then fill empty slots. Mutates the input stack and returns whatever didn't fit.
      */
-    default ItemStack insert(ItemStack stack) {
-        List<Container> targets = getInventories();
+    static ItemStack insertInto(List<Container> targets, ItemStack stack) {
         // Pass 1: merge with existing matching stacks.
         for (Container target : targets) {
             for (int s = 0; s < target.getContainerSize(); s++) {
@@ -116,7 +122,7 @@ public interface InventorySource {
                 ItemStack existing = target.getItem(s);
                 if (existing.isEmpty()) continue;
                 if (!ItemStack.isSameItemSameComponents(existing, stack)) continue;
-                if (!target.canPlaceItem(s, stack)) continue;
+                if (!canInsert(target, s, stack)) continue;
                 int cap = Math.min(existing.getMaxStackSize(), target.getMaxStackSize());
                 int room = cap - existing.getCount();
                 if (room <= 0) continue;
@@ -131,8 +137,7 @@ public interface InventorySource {
             for (int s = 0; s < target.getContainerSize(); s++) {
                 if (stack.isEmpty()) return stack;
                 if (!target.getItem(s).isEmpty()) continue;
-                // Respects container rules, e.g. shulker boxes refuse other shulker boxes.
-                if (!target.canPlaceItem(s, stack)) continue;
+                if (!canInsert(target, s, stack)) continue;
                 int cap = Math.min(stack.getMaxStackSize(), target.getMaxStackSize());
                 int move = Math.min(cap, stack.getCount());
                 target.setItem(s, stack.copyWithCount(move));
@@ -141,6 +146,38 @@ public interface InventorySource {
             }
         }
         return stack;
+    }
+
+    /**
+     * Whether {@code stack} may go into {@code slot}. Besides {@link Container#canPlaceItem}, this
+     * honours the automation rules of a {@link WorldlyContainer} (what hoppers obey): a shulker box,
+     * for example, refuses other shulker boxes only there. We don't know which face the network
+     * touches, so any face that accepts the slot counts.
+     */
+    static boolean canInsert(Container target, int slot, ItemStack stack) {
+        if (!target.canPlaceItem(slot, stack)) return false;
+        if (!(target instanceof WorldlyContainer worldly)) return true;
+        for (Direction face : Direction.values()) {
+            for (int faceSlot : worldly.getSlotsForFace(face)) {
+                if (faceSlot == slot && worldly.canPlaceItemThroughFace(slot, stack, face)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** How many items like {@code stack} (same item and components) {@link #insertInto} could put into {@code target}. */
+    static int spaceFor(Container target, ItemStack stack) {
+        int space = 0;
+        for (int s = 0; s < target.getContainerSize(); s++) {
+            if (!canInsert(target, s, stack)) continue;
+            ItemStack existing = target.getItem(s);
+            if (existing.isEmpty()) {
+                space += Math.min(stack.getMaxStackSize(), target.getMaxStackSize());
+            } else if (ItemStack.isSameItemSameComponents(existing, stack)) {
+                space += Math.max(0, Math.min(existing.getMaxStackSize(), target.getMaxStackSize()) - existing.getCount());
+            }
+        }
+        return space;
     }
 
     /** Removes up to {@code amount} items matching {@code template} and returns them. */

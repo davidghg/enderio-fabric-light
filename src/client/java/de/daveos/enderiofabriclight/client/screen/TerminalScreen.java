@@ -231,17 +231,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
     }
 
-    /** Half-scale count in the cell's bottom-right corner, so long numbers never spill into neighbours. */
     private void drawCount(GuiGraphicsExtractor g, int count, int cellX, int cellY) {
         if (count <= 1) return;
-        String s = formatCount(count);
-        var pose = g.pose();
-        pose.pushMatrix();
-        pose.scale(0.5f, 0.5f);
-        int textX = (cellX + 16) * 2 - this.font.width(s);
-        int textY = (cellY + 16) * 2 - this.font.lineHeight + 1;
-        g.text(this.font, s, textX, textY, C_TEXT, true);
-        pose.popMatrix();
+        drawSmallCount(g, this.font, formatCount(count), cellX, cellY, C_TEXT);
     }
 
     @Override
@@ -439,13 +431,5 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         for (int i = 0; i < 4; i++) {
             g.fill(x + 4 + i, y + i, x + 5 + i, y + 7 - i, C_TEXT_DIM);
         }
-    }
-
-    private static String formatCount(int n) {
-        if (n < 1_000) return Integer.toString(n);
-        if (n < 10_000) return String.format(Locale.ROOT, "%.1fK", n / 1_000.0);
-        if (n < 1_000_000) return (n / 1_000) + "K";
-        if (n < 10_000_000) return String.format(Locale.ROOT, "%.1fM", n / 1_000_000.0);
-        return (n / 1_000_000) + "M";
     }
 }

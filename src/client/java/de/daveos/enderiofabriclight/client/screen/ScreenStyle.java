@@ -1,6 +1,9 @@
 package de.daveos.enderiofabriclight.client.screen;
 
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+
+import java.util.Locale;
 
 /**
  * Shared look of all mod screens: dark slate palette and the fill-drawn panel, slot and field
@@ -55,6 +58,26 @@ final class ScreenStyle {
     static void drawField(GuiGraphicsExtractor g, int x, int y, int w, int h, int border) {
         g.fill(x, y, x + w, y + h, border);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, C_SLOT);
+    }
+
+    /** Half-scale text in a slot's bottom-right corner, so long numbers never spill into neighbours. */
+    static void drawSmallCount(GuiGraphicsExtractor g, Font font, String text, int slotX, int slotY, int color) {
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.scale(0.5f, 0.5f);
+        int textX = (slotX + 16) * 2 - font.width(text);
+        int textY = (slotY + 16) * 2 - font.lineHeight + 1;
+        g.text(font, text, textX, textY, color, true);
+        pose.popMatrix();
+    }
+
+    /** Compact count: 999, 1.2K, 45K, 3.4M. */
+    static String formatCount(int n) {
+        if (n < 1_000) return Integer.toString(n);
+        if (n < 10_000) return String.format(Locale.ROOT, "%.1fK", n / 1_000.0);
+        if (n < 1_000_000) return (n / 1_000) + "K";
+        if (n < 10_000_000) return String.format(Locale.ROOT, "%.1fM", n / 1_000_000.0);
+        return (n / 1_000_000) + "M";
     }
 
     /** Two-pixel horizontal groove (dark line over light line). */

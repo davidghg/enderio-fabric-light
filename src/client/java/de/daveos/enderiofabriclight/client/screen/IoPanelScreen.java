@@ -21,7 +21,11 @@ import static de.daveos.enderiofabriclight.menu.IoPanelMenu.*;
 
 /**
  * Screen for import and export panels: ghost filter on the left, mode button, transfer rate and
- * upgrade slot on the right, player inventory below. Drawn with fills in the terminal's style.
+ * upgrade slot on the right, player inventory below. Drawn with fills in the terminal's style;
+ * import panels use a green accent, export panels an orange one.
+ *
+ * <p>Export panels in "keep in stock" mode show each filter entry's target amount, adjusted with
+ * the mouse wheel (shift: steps of 16).
  */
 public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
     private static final int MODE_X = 70;
@@ -30,23 +34,30 @@ public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
     private static final int MODE_H = 16;
     private static final int RATE_Y = MODE_Y + MODE_H + 6;
 
-    private static final int C_IMPORT     = 0xFF5CE078;
-    private static final int C_IMPORT_DIM = 0xFF266E3A;
-    /** Filter slots get a faint accent tint so they read as "settings", not storage. */
-    private static final int C_FILTER     = 0xFF1A2420;
+    private static final int C_IMPORT          = 0xFF5CE078;
+    private static final int C_IMPORT_DIM      = 0xFF266E3A;
+    private static final int C_IMPORT_FILTER   = 0xFF1A2420;
+    private static final int C_EXPORT          = 0xFFF0963A;
+    private static final int C_EXPORT_DIM      = 0xFF7A4A1E;
+    private static final int C_EXPORT_FILTER   = 0xFF26201A;
     /** Drawn over ghost items so they look like a template rather than a real stack. */
-    private static final int C_GHOST      = 0x701A1D22;
+    private static final int C_GHOST           = 0x701A1D22;
 
     public IoPanelScreen(IoPanelMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, IMAGE_W, IMAGE_H);
     }
 
     private int accent() {
-        return C_IMPORT;
+        return this.menu.isExport() ? C_EXPORT : C_IMPORT;
     }
 
     private int accentDim() {
-        return C_IMPORT_DIM;
+        return this.menu.isExport() ? C_EXPORT_DIM : C_IMPORT_DIM;
+    }
+
+    /** Target amounts only matter for an export panel keeping stock. */
+    private boolean showsAmounts() {
+        return this.menu.isExport() && !this.menu.isAlternateMode();
     }
 
     // --- Background ---------------------------------------------------------
@@ -58,11 +69,12 @@ public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
         int y0 = this.topPos;
         drawPanel(g, x0, y0, this.imageWidth, this.imageHeight);
 
-        // Filter frame + wells.
+        // Filter frame + wells, tinted so they read as settings rather than storage.
+        int filterFill = this.menu.isExport() ? C_EXPORT_FILTER : C_IMPORT_FILTER;
         g.fill(x0 + FILTER_X - 2, y0 + FILTER_Y - 2, x0 + FILTER_X + 3 * CELL, y0 + FILTER_Y + 3 * CELL, accentDim());
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                drawSlot(g, x0 + FILTER_X + col * CELL - 1, y0 + FILTER_Y + row * CELL - 1, C_FILTER);
+                drawSlot(g, x0 + FILTER_X + col * CELL - 1, y0 + FILTER_Y + row * CELL - 1, filterFill);
             }
         }
 
@@ -89,7 +101,7 @@ public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
         // Already translated to (leftPos, topPos).
         g.text(this.font, this.title, 8, 6, C_TEXT, false);
 
-        Component mode = modeName();
+        Component mode = Component.translatable(modeKey());
         g.text(this.font, mode, MODE_X + (MODE_W - this.font.width(mode)) / 2, MODE_Y + 4, accent(), false);
 
         int upgrades = this.menu.getUpgradeCount();
@@ -105,11 +117,14 @@ public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
     @Override
     public void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractContents(g, mouseX, mouseY, partialTick);
+        boolean amounts = showsAmounts();
         for (Slot slot : this.menu.slots) {
-            if (IoPanelMenu.isFilterSlot(slot) && slot.hasItem()) {
-                int x = this.leftPos + slot.x;
-                int y = this.topPos + slot.y;
-                g.fill(x, y, x + 16, y + 16, C_GHOST);
+            if (!IoPanelMenu.isFilterSlot(slot) || !slot.hasItem()) continue;
+            int x = this.leftPos + slot.x;
+            int y = this.topPos + slot.y;
+            g.fill(x, y, x + 16, y + 16, C_GHOST);
+            if (amounts) {
+                drawSmallCount(g, this.font, Integer.toString(this.menu.getAmount(slot.index)), x, y, accent());
             }
         }
     }
@@ -130,6 +145,11 @@ public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
                 }
                 ItemStack stack = hovered.getItem();
                 List<Component> lines = new ArrayList<>(Screen.getTooltipFromItem(this.minecraft, stack));
+                if (showsAmounts()) {
+                    lines.add(Component.translatable("gui.enderio-fabric-light.filter.amount",
+                        this.menu.getAmount(hovered.index)).withColor(accent()));
+                    lines.add(Component.translatable("gui.enderio-fabric-light.filter.amount.hint").withStyle(ChatFormatting.GRAY));
+                }
                 lines.add(Component.translatable("gui.enderio-fabric-light.filter.remove").withStyle(ChatFormatting.GRAY));
                 g.setTooltipForNextFrame(this.font, lines, Optional.empty(), mouseX, mouseY);
                 return;
@@ -154,17 +174,26 @@ public class IoPanelScreen extends AbstractContainerScreen<IoPanelMenu> {
         return super.mouseClicked(event, fromRelease);
     }
 
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        Slot hovered = this.hoveredSlot;
+        if (showsAmounts() && scrollY != 0 && hovered != null && IoPanelMenu.isFilterSlot(hovered) && hovered.hasItem()) {
+            int step = (this.minecraft.hasShiftDown() ? 16 : 1) * (scrollY > 0 ? 1 : -1);
+            this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId,
+                IoPanelMenu.amountButtonId(hovered.index, step));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
     // --- Helpers ------------------------------------------------------------
 
     private String modeKey() {
-        // Import: blacklist by default, whitelist as the alternate mode.
-        return this.menu.isAlternateMode()
-            ? "gui.enderio-fabric-light.mode.whitelist"
-            : "gui.enderio-fabric-light.mode.blacklist";
-    }
-
-    private Component modeName() {
-        return Component.translatable(modeKey());
+        boolean alternate = this.menu.isAlternateMode();
+        if (this.menu.isExport()) {
+            return alternate ? "gui.enderio-fabric-light.mode.push" : "gui.enderio-fabric-light.mode.keep";
+        }
+        return alternate ? "gui.enderio-fabric-light.mode.whitelist" : "gui.enderio-fabric-light.mode.blacklist";
     }
 
     private boolean isOver(double mouseX, double mouseY, int x, int y, int w, int h) {

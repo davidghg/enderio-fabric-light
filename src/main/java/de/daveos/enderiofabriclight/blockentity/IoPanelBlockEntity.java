@@ -33,10 +33,13 @@ import net.minecraft.world.level.storage.ValueOutput;
  */
 public abstract class IoPanelBlockEntity extends BlockEntity implements ExtendedMenuProvider<BlockPos> {
     public static final int FILTER_SIZE = 9;
+    /** Upper bound for a filter entry's target amount; menu data slots are synced as shorts. */
+    public static final int MAX_AMOUNT = 9999;
 
     private static final String TAG_FILTER = "Filter";
     private static final String TAG_UPGRADES = "Upgrades";
     private static final String TAG_MODE = "Mode";
+    private static final String TAG_AMOUNTS = "Amounts";
 
     private final NetworkLink network = new NetworkLink();
     private int cooldown;
@@ -55,16 +58,29 @@ public abstract class IoPanelBlockEntity extends BlockEntity implements Extended
     /** Meaning depends on the panel type, e.g. blacklist/whitelist for the import panel. */
     private boolean alternateMode;
 
-    /** Syncs the mode to the open menu; vanilla sends changed data slots every tick. */
+    /**
+     * Target amount per filter entry, used by the export panel's "keep in stock" mode. Kept apart
+     * from the ghost stacks because saved item stacks can't hold counts above 99.
+     */
+    private final int[] amounts = new int[FILTER_SIZE];
+
+    /**
+     * Syncs mode and amounts to the open menu; vanilla sends changed data slots every tick.
+     * Index 0 is the mode, 1..9 the amounts (see {@link IoPanelMenu#DATA_COUNT}).
+     */
     private final ContainerData dataAccess = new ContainerData() {
         @Override
         public int get(int index) {
-            return alternateMode ? 1 : 0;
+            return index == 0 ? (alternateMode ? 1 : 0) : amounts[index - 1];
         }
 
         @Override
         public void set(int index, int value) {
-            alternateMode = value != 0;
+            if (index == 0) {
+                alternateMode = value != 0;
+            } else {
+                amounts[index - 1] = clampAmount(value);
+            }
             setChanged();
         }
 
@@ -121,6 +137,14 @@ public abstract class IoPanelBlockEntity extends BlockEntity implements Extended
     /** The menu type to open; import and export panels share the menu class but not the type. */
     protected abstract MenuType<IoPanelMenu> menuType();
 
+    public static int clampAmount(int amount) {
+        return Math.max(1, Math.min(MAX_AMOUNT, amount));
+    }
+
+    protected int getAmount(int filterIndex) {
+        return amounts[filterIndex];
+    }
+
     public int getUpgradeCount() {
         ItemStack stack = upgrades.getItem(0);
         return stack.is(ModItems.TRANSFER_UPGRADE) ? stack.getCount() : 0;
@@ -172,6 +196,7 @@ public abstract class IoPanelBlockEntity extends BlockEntity implements Extended
         ContainerHelper.saveAllItems(output.child(TAG_FILTER), filter.getItems());
         ContainerHelper.saveAllItems(output.child(TAG_UPGRADES), upgrades.getItems());
         output.putBoolean(TAG_MODE, alternateMode);
+        output.putIntArray(TAG_AMOUNTS, amounts);
     }
 
     @Override
@@ -180,6 +205,10 @@ public abstract class IoPanelBlockEntity extends BlockEntity implements Extended
         loadInto(input, TAG_FILTER, filter);
         loadInto(input, TAG_UPGRADES, upgrades);
         alternateMode = input.getBooleanOr(TAG_MODE, false);
+        int[] saved = input.getIntArray(TAG_AMOUNTS).orElse(new int[0]);
+        for (int i = 0; i < FILTER_SIZE; i++) {
+            amounts[i] = i < saved.length ? clampAmount(saved[i]) : 1;
+        }
     }
 
     private static void loadInto(ValueInput input, String key, SimpleContainer container) {

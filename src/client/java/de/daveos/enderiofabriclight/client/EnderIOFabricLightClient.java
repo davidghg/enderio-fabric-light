@@ -16,6 +16,7 @@ public class EnderIOFabricLightClient implements ClientModInitializer {
 		// MenuScreens.register is made accessible via fabric-menu-api's classtweaker.
 		MenuScreens.register(ModMenus.TERMINAL, TerminalScreen::new);
 		MenuScreens.register(ModMenus.IMPORT_PANEL, IoPanelScreen::new);
+		MenuScreens.register(ModMenus.EXPORT_PANEL, IoPanelScreen::new);
 
 		// Receive aggregated view updates from the server and push them into whichever
 		// terminal menu the player currently has open.

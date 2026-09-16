@@ -1,0 +1,116 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "glass": "enderio-fabric-light:block/conduit_glass",
+    "energy": "enderio-fabric-light:block/conduit_energy",
+    "particle": "enderio-fabric-light:block/conduit_frame"
+  },
+  "elements": [
+    {
+      "from": [
+        6,
+        6,
+        0
+      ],
+      "to": [
+        10,
+        10,
+        12
+      ],
+      "faces": {
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            0,
+            6,
+            12,
+            10
+          ]
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            0,
+            6,
+            12,
+            10
+          ]
+        },
+        "down": {
+          "texture": "#glass",
+          "uv": [
+            0,
+            6,
+            12,
+            10
+          ],
+          "rotation": 90
+        },
+        "up": {
+          "texture": "#glass",
+          "uv": [
+            0,
+            6,
+            12,
+            10
+          ],
+          "rotation": 90
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        7,
+        0
+      ],
+      "to": [
+        9,
+        9,
+        12
+      ],
+      "faces": {
+        "west": {
+          "texture": "#energy",
+          "uv": [
+            0,
+            7,
+            12,
+            9
+          ]
+        },
+        "east": {
+          "texture": "#energy",
+          "uv": [
+            0,
+            7,
+            12,
+            9
+          ]
+        },
+        "down": {
+          "texture": "#energy",
+          "uv": [
+            0,
+            7,
+            12,
+            9
+          ],
+          "rotation": 90
+        },
+        "up": {
+          "texture": "#energy",
+          "uv": [
+            0,
+            7,
+            12,
+            9
+          ],
+          "rotation": 90
+        }
+      },
+      "shade": false,
+      "light_emission": 15
+    }
+  ]
+}

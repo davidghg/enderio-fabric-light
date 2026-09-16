@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li>37..45: player hotbar (9)</li>
  * </ul>
  *
- * <p>The mode toggle uses vanilla's menu button packet ({@link #clickMenuButton}) and the mode is
- * synced back through a data slot, so this menu needs no custom network payloads.
+ * <p>The mode toggle and amount changes use vanilla's menu button packet ({@link #clickMenuButton});
+ * mode and amounts are synced back through data slots, so this menu needs no custom payloads.
  */
 public class IoPanelMenu extends AbstractContainerMenu {
     // GUI layout in screen-local pixels, shared with the screen.
@@ -43,8 +43,11 @@ public class IoPanelMenu extends AbstractContainerMenu {
     public static final int PLAYER_Y = 84;
     public static final int HOTBAR_Y = 142;
 
-    public static final int DATA_COUNT = 1;
+    /** Data slots: mode, then one target amount per filter entry. */
+    public static final int DATA_COUNT = 1 + IoPanelBlockEntity.FILTER_SIZE;
     public static final int BUTTON_TOGGLE_MODE = 0;
+    /** Amount buttons follow the mode button: one id per (filter slot, step). */
+    private static final int[] AMOUNT_STEPS = {1, -1, 16, -16};
 
     private static final int FILTER_FIRST = 0;
     private static final int FILTER_END = IoPanelBlockEntity.FILTER_SIZE;
@@ -102,9 +105,29 @@ public class IoPanelMenu extends AbstractContainerMenu {
         addDataSlots(data);
     }
 
-    /** Import: whitelist instead of blacklist. */
+    public boolean isExport() {
+        return getType() == ModMenus.EXPORT_PANEL;
+    }
+
+    /** Import: whitelist instead of blacklist. Export: push everything instead of keeping stock. */
     public boolean isAlternateMode() {
         return data.get(0) != 0;
+    }
+
+    /** Target amount of a filter slot (menu slot index 0..8). */
+    public int getAmount(int filterSlot) {
+        return data.get(1 + filterSlot);
+    }
+
+    /**
+     * Button id that changes the amount of a filter slot by {@code step}, which must be one of
+     * +1, -1, +16 or -16.
+     */
+    public static int amountButtonId(int filterSlot, int step) {
+        for (int i = 0; i < AMOUNT_STEPS.length; i++) {
+            if (AMOUNT_STEPS[i] == step) return 1 + filterSlot * AMOUNT_STEPS.length + i;
+        }
+        throw new IllegalArgumentException("Unsupported amount step: " + step);
     }
 
     public static boolean isFilterSlot(Slot slot) {
@@ -159,6 +182,8 @@ public class IoPanelMenu extends AbstractContainerMenu {
             if (i != slotIndex && slots.get(i).getItem().is(carried.getItem())) return; // already filtered
         }
         slot.set(carried.copyWithCount(1));
+        // Sensible default target: one stack of that item.
+        data.set(1 + slotIndex, carried.getMaxStackSize());
     }
 
     @Override
@@ -175,8 +200,16 @@ public class IoPanelMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (id != BUTTON_TOGGLE_MODE) return false;
-        data.set(0, isAlternateMode() ? 0 : 1);
+        if (id == BUTTON_TOGGLE_MODE) {
+            data.set(0, isAlternateMode() ? 0 : 1);
+            return true;
+        }
+        // The id comes from the client: decode defensively.
+        int amountId = id - 1;
+        int filterSlot = amountId / AMOUNT_STEPS.length;
+        if (amountId < 0 || filterSlot >= FILTER_END || !slots.get(filterSlot).hasItem()) return false;
+        int step = AMOUNT_STEPS[amountId % AMOUNT_STEPS.length];
+        data.set(1 + filterSlot, IoPanelBlockEntity.clampAmount(getAmount(filterSlot) + step));
         return true;
     }
 

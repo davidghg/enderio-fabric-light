@@ -22,5 +22,12 @@
   "gui.enderio-fabric-light.filter.remove": "Click to remove",
   "gui.enderio-fabric-light.rate": "%s items / %s s",
   "gui.enderio-fabric-light.upgrades": "Upgrades %s/%s",
-  "gui.enderio-fabric-light.upgrade.hint": "Transfer upgrades (max. %s)"
+  "gui.enderio-fabric-light.upgrade.hint": "Transfer upgrades (max. %s)",
+  "block.enderio-fabric-light.export_panel": "Export Panel",
+  "gui.enderio-fabric-light.mode.keep": "Keep in stock",
+  "gui.enderio-fabric-light.mode.keep.hint": "Tops each filtered item up to its target amount",
+  "gui.enderio-fabric-light.mode.push": "Push all",
+  "gui.enderio-fabric-light.mode.push.hint": "Moves filtered items in while there is room",
+  "gui.enderio-fabric-light.filter.amount": "Target amount: %s",
+  "gui.enderio-fabric-light.filter.amount.hint": "Mouse wheel: ±1, with Shift: ±16"
 }

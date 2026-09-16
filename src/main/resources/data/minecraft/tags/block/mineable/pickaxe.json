@@ -3,6 +3,7 @@
   "values": [
     "enderio-fabric-light:terminal",
     "enderio-fabric-light:conduit",
-    "enderio-fabric-light:import_panel"
+    "enderio-fabric-light:import_panel",
+    "enderio-fabric-light:export_panel"
   ]
 }
