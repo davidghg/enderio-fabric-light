@@ -49,6 +49,38 @@ def front_texture(name, lit, dim):
     gc.write_png(os.path.join(gc.TEX, f"{name}_front.png"), 16, 16, px)
 
 
+def upgrade_texture():
+    """Transfer upgrade: a small circuit card with gold contacts and a glowing double chevron."""
+    outline = (18, 24, 22, 255)
+    board = (30, 58, 48, 255)
+    board_hi = (44, 80, 66, 255)
+    gold = (214, 170, 70, 255)
+    lit = (80, 214, 220, 255)
+    dim = (40, 120, 126, 255)
+    px = gc.canvas(16, 16, (0, 0, 0, 0))
+    for y in range(2, 14):
+        for x in range(2, 14):
+            edge = x in (2, 13) or y in (2, 13)
+            px[y][x] = outline if edge else board
+    for i in range(3, 13):
+        px[3][i] = px[i][3] = board_hi
+    for x in (4, 6, 8, 10):
+        px[12][x] = gold
+    for x0 in (5, 8):
+        for dy, dx in ((0, 0), (1, 1), (2, 2), (3, 1), (4, 0)):
+            px[5 + dy][x0 + dx] = lit
+            px[5 + dy][x0 + dx - 1] = dim if px[5 + dy][x0 + dx - 1] != lit else lit
+    out = os.path.join(os.path.dirname(gc.TEX), "item")
+    os.makedirs(out, exist_ok=True)
+    gc.write_png(os.path.join(out, "transfer_upgrade.png"), 16, 16, px)
+
+    model = {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/transfer_upgrade"}}
+    with open(os.path.join(gc.MODELS, "item", "transfer_upgrade.json"), "w") as f:
+        json.dump(model, f, indent=2)
+    with open(os.path.join(gc.ROOT, "items", "transfer_upgrade.json"), "w") as f:
+        json.dump({"model": {"type": "minecraft:model", "model": f"{NS}:item/transfer_upgrade"}}, f, indent=2)
+
+
 # --- Models ------------------------------------------------------------------
 
 def write_model(rel, textures, elements):
@@ -130,4 +162,5 @@ if __name__ == "__main__":
         front_texture(panel, lit, dim)
         models(panel)
         blockstate(panel)
+    upgrade_texture()
     print("done")

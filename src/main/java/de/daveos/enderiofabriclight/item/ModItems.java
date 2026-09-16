@@ -14,6 +14,10 @@ public final class ModItems {
     public static final Item WRENCH = register("wrench",
         new WrenchItem(new Item.Properties().stacksTo(1).setId(key("wrench"))));
 
+    /** Speeds up import/export panels; up to {@code TransferRate.MAX_UPGRADES} fit in a panel. */
+    public static final Item TRANSFER_UPGRADE = register("transfer_upgrade",
+        new Item(new Item.Properties().setId(key("transfer_upgrade"))));
+
     public static void init() {
         // Triggers class load -> static fields run -> entries registered.
     }

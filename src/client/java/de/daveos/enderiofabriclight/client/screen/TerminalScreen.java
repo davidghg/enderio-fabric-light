@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import static de.daveos.enderiofabriclight.client.screen.ScreenStyle.*;
 import static de.daveos.enderiofabriclight.menu.TerminalMenu.*;
 
 /**
@@ -36,8 +37,6 @@ import static de.daveos.enderiofabriclight.menu.TerminalMenu.*;
  * right column with the 9×6 item grid and scrollbar; player inventory along the bottom.
  */
 public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
-    private static final int CELL = 18;
-
     // Header row.
     private static final int HEADER_Y = 4;
     private static final int HEADER_H = 13;
@@ -56,20 +55,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     // Divider between left column and item grid.
     private static final int DIVIDER_X = GRID_X - 4;
 
-    // Palette.
-    private static final int C_OUTLINE    = 0xFF0E0F12;
-    private static final int C_BG         = 0xFF2A2E35;
-    private static final int C_BG_LIGHT   = 0xFF383D46;
-    private static final int C_BG_DARK    = 0xFF1E2126;
-    private static final int C_SLOT       = 0xFF1A1D22;
-    private static final int C_SLOT_TOP   = 0xFF121418;
-    private static final int C_SLOT_BOT   = 0xFF3B414A;
-    private static final int C_SLOT_HOVER = 0xFF2B3139;
+    // Terminal-specific colours; the shared palette lives in ScreenStyle.
     private static final int C_RETURN     = 0xFF1A2629;
     private static final int C_ACCENT     = 0xFF2CB8C0;
     private static final int C_ACCENT_DIM = 0xFF1E6F75;
-    private static final int C_TEXT       = 0xFFE0E6EE;
-    private static final int C_TEXT_DIM   = 0xFF8A93A0;
 
     private enum SortMode {
         NAME("AZ", "gui.enderio-fabric-light.sort.name"),
@@ -173,9 +162,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         drawScrollbar(g, x0, y0);
 
         // Horizontal divider above the player inventory.
-        int invDividerY = y0 + PLAYER_Y - 7;
-        g.fill(x0 + 7, invDividerY, x0 + this.imageWidth - 7, invDividerY + 1, C_BG_DARK);
-        g.fill(x0 + 7, invDividerY + 1, x0 + this.imageWidth - 7, invDividerY + 2, C_BG_LIGHT);
+        drawDivider(g, x0 + 7, x0 + this.imageWidth - 7, y0 + PLAYER_Y - 7);
 
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -431,46 +418,11 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     // --- Drawing helpers ----------------------------------------------------
 
-    /** Panel with a 1px outline (rounded corners) and a subtle inner bevel. */
-    private static void drawPanel(GuiGraphicsExtractor g, int x, int y, int w, int h) {
-        int x2 = x + w, y2 = y + h;
-        g.fill(x + 2, y, x2 - 2, y + 1, C_OUTLINE);
-        g.fill(x + 2, y2 - 1, x2 - 2, y2, C_OUTLINE);
-        g.fill(x, y + 2, x + 1, y2 - 2, C_OUTLINE);
-        g.fill(x2 - 1, y + 2, x2, y2 - 2, C_OUTLINE);
-        g.fill(x + 1, y + 1, x + 2, y + 2, C_OUTLINE);
-        g.fill(x2 - 2, y + 1, x2 - 1, y + 2, C_OUTLINE);
-        g.fill(x + 1, y2 - 2, x + 2, y2 - 1, C_OUTLINE);
-        g.fill(x2 - 2, y2 - 2, x2 - 1, y2 - 1, C_OUTLINE);
-
-        g.fill(x + 2, y + 1, x2 - 2, y2 - 1, C_BG);
-        g.fill(x + 1, y + 2, x + 2, y2 - 2, C_BG);
-        g.fill(x2 - 2, y + 2, x2 - 1, y2 - 2, C_BG);
-
-        g.fill(x + 2, y + 1, x2 - 2, y + 2, C_BG_LIGHT);
-        g.fill(x + 1, y + 2, x + 2, y2 - 2, C_BG_LIGHT);
-        g.fill(x + 2, y2 - 2, x2 - 2, y2 - 1, C_BG_DARK);
-        g.fill(x2 - 2, y + 2, x2 - 1, y2 - 2, C_BG_DARK);
-    }
-
-    /** 18×18 sunken slot well. */
-    private static void drawSlot(GuiGraphicsExtractor g, int x, int y, int fill) {
-        g.fill(x, y, x + 18, y + 18, C_SLOT_BOT);
-        g.fill(x, y, x + 17, y + 17, C_SLOT_TOP);
-        g.fill(x + 1, y + 1, x + 17, y + 17, fill);
-    }
-
     /** 26×26 result well with an accent frame. */
     private static void drawResultWell(GuiGraphicsExtractor g, int x, int y) {
         g.fill(x, y, x + 26, y + 26, C_ACCENT_DIM);
         g.fill(x + 1, y + 1, x + 25, y + 25, C_SLOT_TOP);
         g.fill(x + 2, y + 2, x + 25, y + 25, C_SLOT);
-    }
-
-    /** Text field frame; the border colour signals focus/hover. */
-    private static void drawField(GuiGraphicsExtractor g, int x, int y, int w, int h, int border) {
-        g.fill(x, y, x + w, y + h, border);
-        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, C_SLOT);
     }
 
     /** 6×6 diagonal cross. */

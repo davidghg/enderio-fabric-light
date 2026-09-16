@@ -17,12 +17,19 @@ public final class ModMenus {
      * server to the client when the menu opens.
      */
     public static MenuType<TerminalMenu> TERMINAL;
+    public static MenuType<IoPanelMenu> IMPORT_PANEL;
 
     public static void init() {
         TERMINAL = Registry.register(
             BuiltInRegistries.MENU,
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "terminal"),
             new ExtendedMenuType<>(TerminalMenu::new, BlockPos.STREAM_CODEC)
+        );
+        IMPORT_PANEL = Registry.register(
+            BuiltInRegistries.MENU,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "import_panel"),
+            new ExtendedMenuType<IoPanelMenu, BlockPos>(
+                (syncId, inv, pos) -> new IoPanelMenu(IMPORT_PANEL, syncId, inv, pos), BlockPos.STREAM_CODEC)
         );
     }
 }

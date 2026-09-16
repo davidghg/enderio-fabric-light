@@ -12,5 +12,15 @@
   "gui.enderio-fabric-light.empty": "No items",
   "gui.enderio-fabric-light.no_matches": "No matches",
   "itemGroup.enderio-fabric-light.main": "EnderIO Fabric light",
-  "tooltip.enderio-fabric-light.total": "Total: %s"
+  "tooltip.enderio-fabric-light.total": "Total: %s",
+  "item.enderio-fabric-light.transfer_upgrade": "Transfer Upgrade",
+  "gui.enderio-fabric-light.mode.blacklist": "Blacklist",
+  "gui.enderio-fabric-light.mode.whitelist": "Whitelist",
+  "gui.enderio-fabric-light.mode.blacklist.hint": "Imports everything except the filtered items",
+  "gui.enderio-fabric-light.mode.whitelist.hint": "Imports only the filtered items",
+  "gui.enderio-fabric-light.filter.hint": "Click with an item to add it to the filter",
+  "gui.enderio-fabric-light.filter.remove": "Click to remove",
+  "gui.enderio-fabric-light.rate": "%s items / %s s",
+  "gui.enderio-fabric-light.upgrades": "Upgrades %s/%s",
+  "gui.enderio-fabric-light.upgrade.hint": "Transfer upgrades (max. %s)"
 }

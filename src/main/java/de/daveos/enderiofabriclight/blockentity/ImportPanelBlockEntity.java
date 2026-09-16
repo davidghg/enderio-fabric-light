@@ -1,53 +1,50 @@
 package de.daveos.enderiofabriclight.blockentity;
 
-import de.daveos.enderiofabriclight.block.PanelBlock;
 import de.daveos.enderiofabriclight.inventory.InventorySource;
-import de.daveos.enderiofabriclight.inventory.NetworkLink;
+import de.daveos.enderiofabriclight.menu.IoPanelMenu;
+import de.daveos.enderiofabriclight.menu.ModMenus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Moves items from the inventory the panel is mounted on into the network, one batch every few
- * ticks. Items only ever flow that way: the mounted inventory is claimed by the panel and never
- * counts as network storage.
+ * Moves items from the inventory the panel is mounted on into the network. Items only ever flow
+ * that way: the mounted inventory is claimed by the panel and never counts as network storage.
+ *
+ * <p>Filter mode: blacklist (default, empty = import everything) or whitelist (alternate mode).
  */
-public class ImportPanelBlockEntity extends BlockEntity {
-    private final NetworkLink network = new NetworkLink();
-    private int cooldown;
-
+public class ImportPanelBlockEntity extends IoPanelBlockEntity {
     public ImportPanelBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.IMPORT_PANEL, pos, state);
     }
 
-    /** Called from the block's ticker, server side only. */
-    public void serverTick(Level level, BlockPos pos, BlockState state) {
-        network.tick(level, pos);
-        if (--cooldown > 0) return;
+    public boolean isWhitelist() {
+        return isAlternateMode();
+    }
 
-        int upgrades = 0; // TODO(M3 step 5): read from the upgrade slot
-        cooldown = TransferRate.interval(upgrades);
+    @Override
+    protected void transfer(Container mounted, InventorySource storage, int budget) {
+        boolean whitelist = isWhitelist();
+        if (whitelist && isFilterEmpty()) return;
 
-        Container source = InventorySource.containerAt(level, pos.relative(PanelBlock.backSide(state)));
-        if (source == null) return;
-        InventorySource storage = network.source();
-        if (storage.getInventories().isEmpty()) return;
-
-        int budget = TransferRate.amount(upgrades);
-        for (int slot = 0; slot < source.getContainerSize() && budget > 0; slot++) {
-            ItemStack stack = source.getItem(slot);
-            if (stack.isEmpty()) continue;
+        for (int slot = 0; slot < mounted.getContainerSize() && budget > 0; slot++) {
+            ItemStack stack = mounted.getItem(slot);
+            if (stack.isEmpty() || isInFilter(stack) != whitelist) continue;
 
             int offered = Math.min(budget, stack.getCount());
             int moved = offered - storage.insert(stack.copyWithCount(offered)).getCount();
             if (moved <= 0) continue;
             // Insert first, then remove from the source: nothing is lost if the network is full.
             stack.shrink(moved);
-            source.setChanged();
+            mounted.setChanged();
             budget -= moved;
         }
+    }
+
+    @Override
+    protected MenuType<IoPanelMenu> menuType() {
+        return ModMenus.IMPORT_PANEL;
     }
 }
