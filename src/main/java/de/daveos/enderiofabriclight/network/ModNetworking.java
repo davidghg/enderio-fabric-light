@@ -57,6 +57,26 @@ public final class ModNetworking {
             });
         });
 
+        // Autocrafting: list request and preview/craft request (C2S), list and plan answers (S2C).
+        PayloadTypeRegistry.clientboundPlay().register(AutocraftListPayload.TYPE, AutocraftListPayload.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(AutocraftPlanPayload.TYPE, AutocraftPlanPayload.STREAM_CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(AutocraftListRequestPayload.TYPE, AutocraftListRequestPayload.STREAM_CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(AutocraftRequestPayload.TYPE, AutocraftRequestPayload.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(AutocraftListRequestPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.containerMenu instanceof TerminalMenu menu) menu.sendCraftables(player);
+            });
+        });
+        ServerPlayNetworking.registerGlobalReceiver(AutocraftRequestPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.containerMenu instanceof TerminalMenu menu) {
+                    menu.handleAutocraft(player, payload.item(), payload.amount(), payload.confirm());
+                }
+            });
+        });
+
         // C2S handler — runs on the network thread, so we hop to the server's main thread before
         // mutating any container or player inventory state.
         ServerPlayNetworking.registerGlobalReceiver(TerminalTakePayload.TYPE, (payload, context) -> {

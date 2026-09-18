@@ -1,7 +1,12 @@
 package de.daveos.enderiofabriclight.menu;
 
+import de.daveos.enderiofabriclight.autocraft.Autocrafter;
+import de.daveos.enderiofabriclight.autocraft.RecipeIndex;
 import de.daveos.enderiofabriclight.block.ModBlocks;
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
+import de.daveos.enderiofabriclight.inventory.InventorySource;
+import de.daveos.enderiofabriclight.network.AutocraftListPayload;
+import de.daveos.enderiofabriclight.network.AutocraftPlanPayload;
 import de.daveos.enderiofabriclight.network.TerminalUpdatePayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -19,11 +24,13 @@ import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.TransientCraftingContainer;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -365,6 +372,91 @@ public class TerminalMenu extends AbstractContainerMenu {
             super.broadcastChanges();
             syncView();
         });
+    }
+
+    // --- Autocrafting -------------------------------------------------------
+
+    /** Minimum ticks between two previews from one player; honest clients debounce well above this. */
+    private static final int PREVIEW_COOLDOWN = 2;
+    // Game time starts at 0, so these start "long ago". Not Long.MIN_VALUE: now - MIN_VALUE overflows
+    // to a negative number, which made the cooldown check drop every preview.
+    private long lastPreviewTime = -PREVIEW_COOLDOWN;
+    private long lastCraftTime = -1;
+
+    // Client-side state, filled by the autocraft payloads and read by the screen.
+    private int craftLimit = -1;
+    private List<Item> craftables = List.of();
+    @Nullable
+    private AutocraftPlanPayload lastPlan;
+
+    /** Server-side handler for {@code AutocraftListRequestPayload}. */
+    public void sendCraftables(ServerPlayer player) {
+        if (!stillValid(player)) return;
+        this.access.execute((level, pos) -> {
+            if (!(level instanceof ServerLevel serverLevel)) return;
+            if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;
+            int limit = Autocrafter.orderLimit(serverLevel, terminal.getInventorySource());
+            List<Item> items = limit == 0 ? List.of()
+                : List.copyOf(RecipeIndex.get(serverLevel.getServer()).craftableItems());
+            ServerPlayNetworking.send(player, new AutocraftListPayload(limit, items));
+        });
+    }
+
+    /**
+     * Server-side handler for {@code AutocraftRequestPayload}: previews or crafts, then reports back.
+     * The server always plans for itself; the request only says what the player wants.
+     */
+    public void handleAutocraft(ServerPlayer player, Item item, int amount, boolean confirm) {
+        if (amount < 1 || !stillValid(player)) return;
+        this.access.execute((level, pos) -> {
+            if (!(level instanceof ServerLevel serverLevel)) return;
+            if (!(level.getBlockEntity(pos) instanceof TerminalBlockEntity terminal)) return;
+
+            long now = serverLevel.getGameTime();
+            if (confirm) {
+                if (now == lastCraftTime) return; // one job per tick is plenty
+                lastCraftTime = now;
+            } else {
+                if (now - lastPreviewTime < PREVIEW_COOLDOWN) return;
+                lastPreviewTime = now;
+            }
+
+            InventorySource network = terminal.getInventorySource();
+            Autocrafter.Result result = confirm
+                ? Autocrafter.craft(serverLevel, network, item, amount, overflow -> {
+                    // Storage full: the rest goes to the player, like a normal take.
+                    if (!player.getInventory().add(overflow)) player.drop(overflow, false);
+                })
+                : Autocrafter.preview(serverLevel, network, item, amount);
+            ServerPlayNetworking.send(player, AutocraftPlanPayload.of(result, item, amount));
+            if (result.outcome() == Autocrafter.Outcome.CRAFTED) {
+                super.broadcastChanges();
+                syncView();
+            }
+        });
+    }
+
+    /** Largest order on this network (client side); -1 until the server answered, 0 without a crafting panel. */
+    public int getCraftLimit() {
+        return craftLimit;
+    }
+
+    public List<Item> getCraftables() {
+        return craftables;
+    }
+
+    @Nullable
+    public AutocraftPlanPayload getLastPlan() {
+        return lastPlan;
+    }
+
+    public void setCraftables(int limit, List<Item> items) {
+        this.craftLimit = limit;
+        this.craftables = List.copyOf(items);
+    }
+
+    public void setLastPlan(@Nullable AutocraftPlanPayload plan) {
+        this.lastPlan = plan;
     }
 
     // --- Sync ---------------------------------------------------------------

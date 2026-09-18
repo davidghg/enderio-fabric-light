@@ -3,6 +3,7 @@ package de.daveos.enderiofabriclight.client.screen;
 import de.daveos.enderiofabriclight.blockentity.TerminalBlockEntity;
 import de.daveos.enderiofabriclight.client.TerminalClientSettings;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
+import de.daveos.enderiofabriclight.network.AutocraftListRequestPayload;
 import de.daveos.enderiofabriclight.network.TerminalClearGridPayload;
 import de.daveos.enderiofabriclight.network.TerminalDepositPayload;
 import de.daveos.enderiofabriclight.network.TerminalTakePayload;
@@ -12,12 +13,17 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -33,8 +39,11 @@ import static de.daveos.enderiofabriclight.menu.TerminalMenu.*;
  * screen texture. Everything is drawn with fills — no GUI texture.
  *
  * <p>Layout (screen-local pixels, constants live in {@link TerminalMenu}):
- * header row with title + search + sort toggle; left column with crafting grid and return area;
- * right column with the 9×6 item grid and scrollbar; player inventory along the bottom.
+ * header row with title + search + mode and sort toggles; left column with crafting grid and return
+ * area; right column with the 9×6 item grid and scrollbar; player inventory along the bottom.
+ *
+ * <p>The mode toggle switches the grid between storage and autocrafting. In craft mode the grid
+ * lists everything the network can craft (from the server) and a click opens {@link AutocraftDialog}.
  */
 public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     // Header row.
@@ -44,8 +53,13 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private static final int SCROLLBAR_X = GRID_X + GRID_COLS * CELL + 3;
     private static final int SCROLLBAR_W = 5;
     private static final int SORT_X = SCROLLBAR_X + SCROLLBAR_W - SORT_W;
+    private static final int MODE_W = 18;
+    private static final int MODE_X = SORT_X - 3 - MODE_W;
     private static final int SEARCH_X = GRID_X - 1;
-    private static final int SEARCH_W = SORT_X - 3 - SEARCH_X;
+    private static final int SEARCH_W = MODE_X - 3 - SEARCH_X;
+
+    /** How long a confirmation such as "crafted 64 torches" stays in the header, in ticks. */
+    private static final int MESSAGE_TICKS = 60;
 
     // "Clear crafting grid" button, centred under the result well.
     private static final int CLEAR_SIZE = 12;
@@ -76,6 +90,24 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     /** How many grid rows we've scrolled past (0 = top). */
     private int scrollRow = 0;
     private boolean draggingScrollbar = false;
+
+    /** Grid shows craftable items instead of storage. */
+    private boolean craftMode = false;
+    @Nullable
+    private AutocraftDialog dialog;
+    @Nullable
+    private Component message;
+    private int messageTicks;
+
+    // displayList() runs several times per frame and the craft list has hundreds of entries, so the
+    // result is cached until one of its inputs changes.
+    private List<ItemStack> cachedList = List.of();
+    @Nullable
+    private List<Object> cachedKey;
+    @Nullable
+    private List<ItemStack> cachedView;
+    @Nullable
+    private List<Item> cachedCraftables;
 
     public TerminalScreen(TerminalMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, IMAGE_W, IMAGE_H);
@@ -127,6 +159,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         drawField(g, x0 + SEARCH_X, y0 + HEADER_Y, SEARCH_W, HEADER_H, searchActive ? C_ACCENT : C_SLOT_BOT);
         boolean sortHover = isOver(mouseX, mouseY, SORT_X, HEADER_Y, SORT_W, HEADER_H);
         drawField(g, x0 + SORT_X, y0 + HEADER_Y, SORT_W, HEADER_H, sortHover ? C_ACCENT : C_SLOT_BOT);
+        boolean modeHover = isOver(mouseX, mouseY, MODE_X, HEADER_Y, MODE_W, HEADER_H);
+        int modeBorder = craftMode ? AutocraftDialog.C_ACCENT : modeHover ? C_ACCENT : C_SLOT_BOT;
+        drawField(g, x0 + MODE_X, y0 + HEADER_Y, MODE_W, HEADER_H, modeBorder);
 
         // Left column: crafting grid, arrow, result, return area.
         for (int row = 0; row < 3; row++) {
@@ -195,7 +230,14 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     @Override
     protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         // Already translated to (leftPos, topPos). Inventory label intentionally omitted.
-        g.text(this.font, this.title, 8, HEADER_Y + 3, C_TEXT, false);
+        if (message != null) {
+            g.text(this.font, message, 8, HEADER_Y + 3, AutocraftDialog.C_ACCENT, false);
+        } else if (craftMode) {
+            g.text(this.font, Component.translatable("gui.enderio-fabric-light.autocraft.header"),
+                8, HEADER_Y + 3, AutocraftDialog.C_ACCENT, false);
+        } else {
+            g.text(this.font, this.title, 8, HEADER_Y + 3, C_TEXT, false);
+        }
 
         int iconW = this.font.width(sortMode.icon);
         g.text(this.font, sortMode.icon, SORT_X + (SORT_W - iconW) / 2 + 1, HEADER_Y + 3, C_ACCENT, false);
@@ -204,17 +246,47 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     @Override
     public void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractContents(g, mouseX, mouseY, partialTick);
+        drawModeIcon(g);
+        drawGrid(g);
 
+        if (dialog != null) {
+            // A new stratum draws above everything so far, item icons included.
+            g.nextStratum();
+            dialog.layout(this.leftPos, this.topPos, this.imageWidth, this.imageHeight);
+            dialog.render(g, this.width, this.height, mouseX, mouseY);
+        }
+    }
+
+    /** Chest in storage mode, crafting table in craft mode, shrunk to fit the header button. */
+    private void drawModeIcon(GuiGraphicsExtractor g) {
+        ItemStack icon = new ItemStack(craftMode ? Items.CRAFTING_TABLE : Items.CHEST);
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.translate(this.leftPos + MODE_X + (MODE_W - 10) / 2f, this.topPos + HEADER_Y + 1.5f);
+        pose.scale(10 / 16f, 10 / 16f);
+        g.item(icon, 0, 0);
+        pose.popMatrix();
+    }
+
+    private void drawGrid(GuiGraphicsExtractor g) {
         List<ItemStack> view = displayList();
         clampScroll(view.size());
 
         if (view.isEmpty()) {
-            Component msg = Component.translatable(this.filter.isEmpty()
-                ? "gui.enderio-fabric-light.empty"
-                : "gui.enderio-fabric-light.no_matches");
+            String key;
+            if (craftMode && this.menu.getCraftLimit() < 0) {
+                key = "gui.enderio-fabric-light.autocraft.loading";
+            } else if (craftMode && this.menu.getCraftLimit() == 0) {
+                key = "gui.enderio-fabric-light.autocraft.no_panel";
+            } else {
+                key = this.filter.isEmpty() ? "gui.enderio-fabric-light.empty" : "gui.enderio-fabric-light.no_matches";
+            }
             int cx = this.leftPos + GRID_X + GRID_COLS * CELL / 2;
             int cy = this.topPos + GRID_Y + GRID_ROWS * CELL / 2 - 4;
-            g.text(this.font, msg, cx - this.font.width(msg) / 2, cy, C_TEXT_DIM, false);
+            for (FormattedCharSequence line : this.font.split(Component.translatable(key), GRID_COLS * CELL - 8)) {
+                g.text(this.font, line, cx - this.font.width(line) / 2, cy, C_TEXT_DIM, false);
+                cy += this.font.lineHeight;
+            }
             return;
         }
 
@@ -227,8 +299,18 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             g.item(stack, cx, cy);
             // Empty string suppresses vanilla's full-size count; we draw a compact one instead.
             g.itemDecorations(this.font, stack, cx, cy, "");
-            drawCount(g, stack.getCount(), cx, cy);
+            drawCount(g, countOf(stack), cx, cy);
         }
+    }
+
+    /** Stored amount; in craft mode the list holds single templates, so it is looked up in the view. */
+    private int countOf(ItemStack stack) {
+        if (!craftMode) return stack.getCount();
+        int total = 0;
+        for (ItemStack stored : this.menu.getView()) {
+            if (stored.is(stack.getItem())) total += stored.getCount();
+        }
+        return total;
     }
 
     private void drawCount(GuiGraphicsExtractor g, int count, int cellX, int cellY) {
@@ -238,8 +320,17 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        if (dialog != null) {
+            dialog.renderTooltip(g, mouseX, mouseY);
+            return;
+        }
         super.extractTooltip(g, mouseX, mouseY);
 
+        if (isOver(mouseX, mouseY, MODE_X, HEADER_Y, MODE_W, HEADER_H)) {
+            g.setTooltipForNextFrame(this.font, Component.translatable(craftMode
+                ? "gui.enderio-fabric-light.mode.storage" : "gui.enderio-fabric-light.mode.craft"), mouseX, mouseY);
+            return;
+        }
         if (isOver(mouseX, mouseY, SORT_X, HEADER_Y, SORT_W, HEADER_H)) {
             g.setTooltipForNextFrame(this.font, Component.translatable(sortMode.tooltipKey), mouseX, mouseY);
             return;
@@ -265,7 +356,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         ItemStack stack = view.get(index);
         List<Component> lines = new ArrayList<>(Screen.getTooltipFromItem(this.minecraft, stack));
         lines.add(Component.translatable("tooltip.enderio-fabric-light.total",
-            String.format(Locale.ROOT, "%,d", stack.getCount())).withStyle(ChatFormatting.GRAY));
+            String.format(Locale.ROOT, "%,d", countOf(stack))).withStyle(ChatFormatting.GRAY));
+        if (craftMode) {
+            lines.add(Component.translatable("tooltip.enderio-fabric-light.autocraft").withColor(AutocraftDialog.C_ACCENT));
+        }
         g.setTooltipForNextFrame(this.font, lines, Optional.empty(), mouseX, mouseY);
     }
 
@@ -273,20 +367,36 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     /** Filtered + sorted view of the aggregated stacks. Server sends the full list; we shape it here. */
     private List<ItemStack> displayList() {
-        List<ItemStack> list = new ArrayList<>(this.menu.getView());
+        // Menu lists are replaced (never mutated) on update, so identity shows whether they changed.
+        List<Object> key = List.of(craftMode, filter, sortMode);
+        if (key.equals(cachedKey) && cachedView == this.menu.getView() && cachedCraftables == this.menu.getCraftables()) {
+            return cachedList;
+        }
+
+        List<ItemStack> list = new ArrayList<>();
+        if (craftMode) {
+            for (Item item : this.menu.getCraftables()) list.add(new ItemStack(item));
+        } else {
+            list.addAll(this.menu.getView());
+        }
         if (!this.filter.isEmpty()) {
             list.removeIf(s -> !s.getHoverName().getString().toLowerCase(Locale.ROOT).contains(this.filter));
         }
         Comparator<ItemStack> byName = Comparator.comparing(s -> s.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER);
         switch (this.sortMode) {
             case NAME -> list.sort(byName);
-            case COUNT -> list.sort(Comparator.comparingInt(ItemStack::getCount).reversed().thenComparing(byName));
+            case COUNT -> list.sort(Comparator.comparingInt(this::countOf).reversed().thenComparing(byName));
         }
+        cachedKey = key;
+        cachedView = this.menu.getView();
+        cachedCraftables = this.menu.getCraftables();
+        cachedList = list;
         return list;
     }
 
     /** Grid cell (0-based, relative to the visible page) under the mouse, or -1. */
     private int hoveredGridCell(double mouseX, double mouseY) {
+        if (dialog != null) return -1;
         if (!isOver(mouseX, mouseY, GRID_X, GRID_Y, GRID_COLS * CELL, GRID_ROWS * CELL)) return -1;
         int col = (int) ((mouseX - this.leftPos - GRID_X) / CELL);
         int row = (int) ((mouseY - this.topPos - GRID_Y) / CELL);
@@ -314,6 +424,16 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     public boolean mouseClicked(MouseButtonEvent event, boolean fromRelease) {
         int button = event.button();
 
+        if (dialog != null) {
+            if (button == 0) dialog.mouseClicked(event.x(), event.y());
+            return true;
+        }
+
+        if (button == 0 && isOver(event.x(), event.y(), MODE_X, HEADER_Y, MODE_W, HEADER_H)) {
+            setCraftMode(!craftMode);
+            return true;
+        }
+
         if (button == 0 && isOver(event.x(), event.y(), SORT_X, HEADER_Y, SORT_W, HEADER_H)) {
             this.sortMode = this.sortMode.next();
             TerminalClientSettings.setSort(this.sortMode.name());
@@ -339,6 +459,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 ClientPlayNetworking.send(new TerminalDepositPayload(button == 1));
                 return true;
             }
+            if (cell >= 0 && craftMode) {
+                List<ItemStack> view = displayList();
+                int index = scrollRow * GRID_COLS + cell;
+                if (index < view.size()) openDialog(view.get(index).getItem());
+                return true;
+            }
             if (cell >= 0) {
                 List<ItemStack> view = displayList();
                 int index = scrollRow * GRID_COLS + cell;
@@ -356,8 +482,51 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return super.mouseClicked(event, fromRelease);
     }
 
+    private void setCraftMode(boolean on) {
+        craftMode = on;
+        scrollRow = 0;
+        // Ask every time: crafting panels may have been added, removed or upgraded meanwhile.
+        if (on) ClientPlayNetworking.send(new AutocraftListRequestPayload());
+    }
+
+    private void openDialog(Item item) {
+        if (this.search != null) this.search.setFocused(false);
+        setFocused(null);
+        dialog = new AutocraftDialog(this.font, this.menu, item, 1);
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (dialog != null) {
+            dialog.tick();
+            if (dialog.isClosed()) {
+                Component done = dialog.takeDoneMessage();
+                if (done != null) {
+                    message = done;
+                    messageTicks = MESSAGE_TICKS;
+                }
+                dialog = null;
+            }
+        }
+        if (messageTicks > 0 && --messageTicks == 0) message = null;
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        if (dialog != null) {
+            dialog.charTyped(event);
+            return true;
+        }
+        return super.charTyped(event);
+    }
+
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (dialog != null) {
+            // Modal: Escape closes the dialog, not the terminal.
+            return dialog.keyPressed(event);
+        }
         // While typing in the search box, don't let the inventory key (default "E") close the screen.
         if (this.search != null && this.search.canConsumeInput()
                 && this.minecraft.options.keyInventory.matches(event)) {
@@ -368,6 +537,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (dialog != null) return true;
         if (this.draggingScrollbar) {
             scrollToMouse(event.y());
             return true;
@@ -377,6 +547,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
+        if (dialog != null) return true;
         if (event.button() == 0 && this.draggingScrollbar) {
             this.draggingScrollbar = false;
             return true;
@@ -398,6 +569,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (dialog != null) {
+            dialog.mouseScrolled(mouseX, mouseY, scrollY, this.minecraft.hasShiftDown());
+            return true;
+        }
         if (isOver(mouseX, mouseY, GRID_X, GRID_Y, SCROLLBAR_X + SCROLLBAR_W - GRID_X, GRID_ROWS * CELL)) {
             int max = Math.max(0, totalRows() - GRID_ROWS);
             if (max > 0) {

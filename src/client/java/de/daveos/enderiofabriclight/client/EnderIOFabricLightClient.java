@@ -5,6 +5,8 @@ import de.daveos.enderiofabriclight.client.screen.IoPanelScreen;
 import de.daveos.enderiofabriclight.client.screen.TerminalScreen;
 import de.daveos.enderiofabriclight.menu.ModMenus;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
+import de.daveos.enderiofabriclight.network.AutocraftListPayload;
+import de.daveos.enderiofabriclight.network.AutocraftPlanPayload;
 import de.daveos.enderiofabriclight.network.TerminalUpdatePayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -25,6 +27,18 @@ public class EnderIOFabricLightClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(TerminalUpdatePayload.TYPE, (payload, ctx) -> {
 			if (ctx.player().containerMenu instanceof TerminalMenu terminal) {
 				terminal.setView(payload.stacks());
+			}
+		});
+
+		// Autocrafting answers go to the open terminal; its screen picks them up on the next tick.
+		ClientPlayNetworking.registerGlobalReceiver(AutocraftListPayload.TYPE, (payload, ctx) -> {
+			if (ctx.player().containerMenu instanceof TerminalMenu terminal) {
+				terminal.setCraftables(payload.limit(), payload.items());
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(AutocraftPlanPayload.TYPE, (payload, ctx) -> {
+			if (ctx.player().containerMenu instanceof TerminalMenu terminal) {
+				terminal.setLastPlan(payload);
 			}
 		});
 	}
