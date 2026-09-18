@@ -2,8 +2,9 @@
 
 A small Fabric mod for Minecraft **26.1.2** inspired by Ender IO's Inventory Panel: a terminal
 panel that shows the contents of all connected chests in one searchable list, lets you take and
-store items, and crafts straight from storage. Chests are linked with thin conduits, and import and
-export panels connect farms and other chests to the system.
+store items, and crafts straight from storage — or lets the system autocraft whole recipe chains.
+Chests are linked with thin conduits, and import and export panels connect farms and other chests
+to the system.
 
 This is an independent implementation — it contains no Ender IO code.
 
@@ -34,6 +35,23 @@ block to hang on and pops off otherwise.
 | Craft in the 3×3 grid | used ingredients are refilled from storage; shift-click the result to craft repeatedly |
 | × under the result slot | move the crafting grid back into storage |
 | Sort button (AZ / #) | sort by name or amount |
+| Mode button (chest / crafting table) | switch between storage and autocrafting (needs a crafting panel) |
+
+#### Autocrafting
+
+In autocrafting mode the grid lists every item the network can craft, with the amount already in
+storage. Click one to open the craft dialog:
+
+- Set the amount with the −64 / −1 / +1 / +64 buttons, by typing, or with the mouse wheel over the
+  field (Shift: ±16).
+- The preview shows the ingredients taken from storage and, on a red ground, anything missing.
+- **Craft** (or Enter) crafts instantly; the result goes into storage. **Cancel** (or Esc) closes the
+  dialog.
+
+The system uses every crafting-table recipe and crafts intermediates on its own (logs → planks →
+sticks → torches). Where a recipe accepts several items, it uses what storage holds most of, e.g. the
+most plentiful wood type. Damaged, enchanted, renamed or otherwise special items are never used up.
+Leftovers such as empty buckets go back into storage.
 
 ### Conduit
 
@@ -78,6 +96,21 @@ Speeds up import and export panels:
 | 3 | 64 | 1 s | 64 |
 | 4 | 64 | 0.5 s | 128 |
 
+### Crafting Panel
+
+Enables autocrafting in every terminal on its network. Like the terminal, it connects through its
+**back**: mount it on a conduit. The largest order depends on the crafting upgrades inside:
+
+| Crafting upgrades | Largest order |
+| --- | --- |
+| 0 | 64 |
+| 1 | 256 |
+| 2 | 1,024 |
+| 3 | 4,096 |
+| 4 | 9,999 |
+
+With several crafting panels on one network, the best one counts.
+
 ### Conduit Wrench
 
 - Right-click a conduit arm: switch that connection off or on (splits networks).
@@ -98,8 +131,13 @@ D Y D               D Y D               D R D
 B H B               B S B               R N R
 I O I               I O I               D R D
 
+Crafting Panel      Crafting Upgrade
+D Y D               D R D
+B W B               R N R
+I O I               D W D
+
 D = diamond   Y = eye of ender   B = block of redstone   H = hopper   S = sticky piston
-I = iron ingot   O = conduit   R = redstone   N = netherite scrap
+I = iron ingot   O = conduit   R = redstone   N = netherite scrap   W = crafting table
 ```
 
 ## Upgrading from 1.0.x
@@ -114,7 +152,7 @@ changes — break and replace one conduit per line to refresh them.
 ./gradlew build         # jar in build/libs/
 python gen_conduit.py   # regenerate conduit models and textures
 python gen_textures.py  # regenerate terminal and wrench textures
-python gen_panels.py    # regenerate import/export panel and upgrade assets
+python gen_panels.py    # regenerate panel and upgrade assets
 ```
 
 ## License
