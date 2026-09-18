@@ -1,0 +1,79 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "front": "enderio-fabric-light:block/crafting_panel_front",
+    "side": "enderio-fabric-light:block/terminal_side",
+    "particle": "enderio-fabric-light:block/terminal_side"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        13
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#front"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "south"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            3,
+            16
+          ],
+          "texture": "#side"
+        },
+        "west": {
+          "uv": [
+            13,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side"
+        },
+        "up": {
+          "uv": [
+            0,
+            13,
+            16,
+            16
+          ],
+          "texture": "#side"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            3
+          ],
+          "texture": "#side"
+        }
+      }
+    }
+  ]
+}

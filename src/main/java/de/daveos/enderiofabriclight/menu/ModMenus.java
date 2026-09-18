@@ -19,6 +19,7 @@ public final class ModMenus {
     public static MenuType<TerminalMenu> TERMINAL;
     public static MenuType<IoPanelMenu> IMPORT_PANEL;
     public static MenuType<IoPanelMenu> EXPORT_PANEL;
+    public static MenuType<CraftingPanelMenu> CRAFTING_PANEL;
 
     public static void init() {
         TERMINAL = Registry.register(
@@ -37,6 +38,11 @@ public final class ModMenus {
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "export_panel"),
             new ExtendedMenuType<IoPanelMenu, BlockPos>(
                 (syncId, inv, pos) -> new IoPanelMenu(EXPORT_PANEL, syncId, inv, pos), BlockPos.STREAM_CODEC)
+        );
+        CRAFTING_PANEL = Registry.register(
+            BuiltInRegistries.MENU,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "crafting_panel"),
+            new ExtendedMenuType<>(CraftingPanelMenu::new, BlockPos.STREAM_CODEC)
         );
     }
 }

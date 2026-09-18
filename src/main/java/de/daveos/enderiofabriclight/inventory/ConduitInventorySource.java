@@ -46,9 +46,12 @@ public class ConduitInventorySource implements InventorySource {
     }
 
     private List<Entry> cached = List.of();
+    /** Other panels docked to the same network (e.g. a crafting panel), by position. */
+    private List<BlockPos> panels = List.of();
 
     @Override
     public void update(Level level, BlockPos panelPos) {
+        panels = List.of();
         BlockState panelState = level.getBlockState(panelPos);
         if (!(panelState.getBlock() instanceof PanelBlock panel)) {
             cached = List.of();
@@ -104,11 +107,18 @@ public class ConduitInventorySource implements InventorySource {
             }
         }
 
+        List<BlockPos> foundPanels = new ArrayList<>();
         for (BlockPos p : plugs) {
-            collectAt(level, p, seen, result);
+            // A plug leads to storage or to another panel's network side (conduits only plug into those).
+            if (!p.equals(panelPos) && level.isLoaded(p) && level.getBlockState(p).getBlock() instanceof PanelBlock) {
+                foundPanels.add(p);
+            } else {
+                collectAt(level, p, seen, result);
+            }
         }
 
         cached = List.copyOf(result);
+        panels = List.copyOf(foundPanels);
     }
 
     /** Adds the storage block at {@code n} (if any) to {@code out}. */
@@ -156,6 +166,11 @@ public class ConduitInventorySource implements InventorySource {
             if (!e.isValid()) return true;
         }
         return false;
+    }
+
+    @Override
+    public List<BlockPos> getPanels() {
+        return panels;
     }
 
     @Override

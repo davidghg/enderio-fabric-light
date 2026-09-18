@@ -18,6 +18,10 @@ public final class ModItems {
     public static final Item TRANSFER_UPGRADE = register("transfer_upgrade",
         new Item(new Item.Properties().setId(key("transfer_upgrade"))));
 
+    /** Raises a crafting panel's largest autocrafting order; up to {@code CraftingLimit.MAX_UPGRADES} fit. */
+    public static final Item CRAFTING_UPGRADE = register("crafting_upgrade",
+        new Item(new Item.Properties().setId(key("crafting_upgrade"))));
+
     public static void init() {
         // Triggers class load -> static fields run -> entries registered.
     }

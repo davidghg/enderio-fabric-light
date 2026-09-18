@@ -50,14 +50,12 @@ def front_texture(name, lit, dim):
     gc.write_png(os.path.join(gc.TEX, f"{name}_front.png"), 16, 16, px)
 
 
-def upgrade_texture():
-    """Transfer upgrade: a small circuit card with gold contacts and a glowing double chevron."""
+def upgrade_card():
+    """Blank circuit card with gold contacts, shared by all upgrades."""
     outline = (18, 24, 22, 255)
     board = (30, 58, 48, 255)
     board_hi = (44, 80, 66, 255)
     gold = (214, 170, 70, 255)
-    lit = (80, 214, 220, 255)
-    dim = (40, 120, 126, 255)
     px = gc.canvas(16, 16, (0, 0, 0, 0))
     for y in range(2, 14):
         for x in range(2, 14):
@@ -67,19 +65,89 @@ def upgrade_texture():
         px[3][i] = px[i][3] = board_hi
     for x in (4, 6, 8, 10):
         px[12][x] = gold
+    return px
+
+
+def write_item(name, px):
+    out = os.path.join(os.path.dirname(gc.TEX), "item")
+    os.makedirs(out, exist_ok=True)
+    gc.write_png(os.path.join(out, f"{name}.png"), 16, 16, px)
+    model = {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{name}"}}
+    with open(os.path.join(gc.MODELS, "item", f"{name}.json"), "w") as f:
+        json.dump(model, f, indent=2)
+    with open(os.path.join(gc.ROOT, "items", f"{name}.json"), "w") as f:
+        json.dump({"model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"}}, f, indent=2)
+
+
+def upgrade_texture():
+    """Transfer upgrade: the circuit card with a glowing double chevron."""
+    lit = (80, 214, 220, 255)
+    dim = (40, 120, 126, 255)
+    px = upgrade_card()
     for x0 in (5, 8):
         for dy, dx in ((0, 0), (1, 1), (2, 2), (3, 1), (4, 0)):
             px[5 + dy][x0 + dx] = lit
             px[5 + dy][x0 + dx - 1] = dim if px[5 + dy][x0 + dx - 1] != lit else lit
-    out = os.path.join(os.path.dirname(gc.TEX), "item")
-    os.makedirs(out, exist_ok=True)
-    gc.write_png(os.path.join(out, "transfer_upgrade.png"), 16, 16, px)
+    write_item("transfer_upgrade", px)
 
-    model = {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/transfer_upgrade"}}
-    with open(os.path.join(gc.MODELS, "item", "transfer_upgrade.json"), "w") as f:
-        json.dump(model, f, indent=2)
-    with open(os.path.join(gc.ROOT, "items", "transfer_upgrade.json"), "w") as f:
-        json.dump({"model": {"type": "minecraft:model", "model": f"{NS}:item/transfer_upgrade"}}, f, indent=2)
+
+def crafting_upgrade_texture():
+    """Crafting upgrade: the circuit card with a glowing 3×3 crafting grid."""
+    lit = (190, 140, 250, 255)
+    dim = (104, 70, 150, 255)
+    px = upgrade_card()
+    for gy in range(3):
+        for gx in range(3):
+            x, y = 5 + gx * 2, 4 + gy * 2
+            px[y][x] = lit if (gx + gy) % 2 == 0 else dim
+    write_item("crafting_upgrade", px)
+
+
+# --- Crafting panel ------------------------------------------------------------
+
+CRAFTING_LIT = (190, 140, 250, 255)
+CRAFTING_DIM = (96, 64, 140, 255)
+
+
+def crafting_front_texture():
+    """Screen-like front as on the terminal, showing a violet 3×3 grid with an arrow and result."""
+    bezel = (58, 63, 72, 255)
+    bezel_dk = (32, 35, 41, 255)
+    bezel_lt = (84, 90, 100, 255)
+    screen = (26, 20, 38, 255)
+    px = gc.canvas(16, 16, bezel)
+    for i in range(16):
+        px[0][i] = px[15][i] = px[i][0] = px[i][15] = bezel_dk
+    for i in range(1, 15):
+        px[1][i] = px[i][1] = bezel_lt
+    for y in range(3, 13):
+        for x in range(3, 13):
+            px[y][x] = screen
+    for gy in range(3):
+        for gx in range(3):
+            x, y = 4 + gx * 2, 5 + gy * 2
+            px[y][x] = CRAFTING_DIM
+    px[7][10] = CRAFTING_LIT                     # arrow
+    for y in (6, 7, 8):
+        px[y][11] = CRAFTING_LIT                 # result
+    px[5][4] = px[7][6] = px[9][8] = CRAFTING_LIT
+    gc.write_png(os.path.join(gc.TEX, "crafting_panel_front.png"), 16, 16, px)
+
+
+def crafting_panel():
+    """Terminal-shaped panel without a socket: it joins the network through its back."""
+    crafting_front_texture()
+    textures = {
+        "front": f"{NS}:block/crafting_panel_front",
+        "side": f"{NS}:block/terminal_side",
+        "particle": f"{NS}:block/terminal_side",
+    }
+    write_model("block/crafting_panel", textures, [panel_element()])
+    variants = {f"facing={facing}": {"model": f"{NS}:block/crafting_panel", **rot} for facing, rot in ROTATIONS.items()}
+    with open(os.path.join(gc.ROOT, "blockstates", "crafting_panel.json"), "w") as f:
+        json.dump({"variants": variants}, f, indent=2)
+    with open(os.path.join(gc.ROOT, "items", "crafting_panel.json"), "w") as f:
+        json.dump({"model": {"type": "minecraft:model", "model": f"{NS}:block/crafting_panel"}}, f, indent=2)
 
 
 # --- Models ------------------------------------------------------------------
@@ -164,4 +232,6 @@ if __name__ == "__main__":
         models(panel)
         blockstate(panel)
     upgrade_texture()
+    crafting_upgrade_texture()
+    crafting_panel()
     print("done")

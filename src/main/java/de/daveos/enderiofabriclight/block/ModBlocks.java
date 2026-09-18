@@ -57,6 +57,16 @@ public final class ModBlocks {
         true
     );
 
+    public static final Block CRAFTING_PANEL = register(
+        "crafting_panel",
+        CraftingPanelBlock::new,
+        BlockBehaviour.Properties.of()
+            .strength(3.0f, 6.0f)
+            .sound(SoundType.METAL)
+            .noOcclusion(),
+        true
+    );
+
     public static void init() {
         // Triggers class load -> static fields run -> entries registered.
     }

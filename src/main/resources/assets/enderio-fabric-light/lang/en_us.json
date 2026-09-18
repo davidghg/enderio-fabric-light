@@ -29,5 +29,10 @@
   "gui.enderio-fabric-light.mode.push": "Push all",
   "gui.enderio-fabric-light.mode.push.hint": "Moves filtered items in while there is room",
   "gui.enderio-fabric-light.filter.amount": "Target amount: %s",
-  "gui.enderio-fabric-light.filter.amount.hint": "Mouse wheel: ±1, with Shift: ±16"
+  "gui.enderio-fabric-light.filter.amount.hint": "Mouse wheel: ±1, with Shift: ±16",
+  "block.enderio-fabric-light.crafting_panel": "Crafting Panel",
+  "item.enderio-fabric-light.crafting_upgrade": "Crafting Upgrade",
+  "gui.enderio-fabric-light.crafting.limit": "Largest order: %s items",
+  "gui.enderio-fabric-light.crafting.info": "Enables autocrafting in every terminal on this network.",
+  "gui.enderio-fabric-light.crafting.upgrade.hint": "Crafting upgrades (max. %s)"
 }

@@ -15,6 +15,7 @@ public final class ModBlockEntities {
     public static BlockEntityType<ConduitBlockEntity> CONDUIT;
     public static BlockEntityType<ImportPanelBlockEntity> IMPORT_PANEL;
     public static BlockEntityType<ExportPanelBlockEntity> EXPORT_PANEL;
+    public static BlockEntityType<CraftingPanelBlockEntity> CRAFTING_PANEL;
 
     public static void init() {
         TERMINAL = Registry.register(
@@ -36,6 +37,11 @@ public final class ModBlockEntities {
             BuiltInRegistries.BLOCK_ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "export_panel"),
             FabricBlockEntityTypeBuilder.create(ExportPanelBlockEntity::new, ModBlocks.EXPORT_PANEL).build()
+        );
+        CRAFTING_PANEL = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "crafting_panel"),
+            FabricBlockEntityTypeBuilder.create(CraftingPanelBlockEntity::new, ModBlocks.CRAFTING_PANEL).build()
         );
     }
 }

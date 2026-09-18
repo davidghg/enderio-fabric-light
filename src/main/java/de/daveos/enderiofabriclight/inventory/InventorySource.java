@@ -45,6 +45,14 @@ public interface InventorySource {
      */
     List<Container> getInventories();
 
+    /**
+     * Positions of the other panels on the same network, as of the last {@link #update}. Callers
+     * must re-check the block there, since it may have changed since.
+     */
+    default List<BlockPos> getPanels() {
+        return List.of();
+    }
+
     /** Whether the cached list references containers that have since been removed or unloaded. */
     default boolean isStale() {
         return false;

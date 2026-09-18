@@ -29,5 +29,10 @@
   "gui.enderio-fabric-light.mode.push": "Alles schieben",
   "gui.enderio-fabric-light.mode.push.hint": "Schiebt Filter-Items hinein, solange Platz ist",
   "gui.enderio-fabric-light.filter.amount": "Zielmenge: %s",
-  "gui.enderio-fabric-light.filter.amount.hint": "Mausrad: ±1, mit Shift: ±16"
+  "gui.enderio-fabric-light.filter.amount.hint": "Mausrad: ±1, mit Shift: ±16",
+  "block.enderio-fabric-light.crafting_panel": "Crafting-Panel",
+  "item.enderio-fabric-light.crafting_upgrade": "Crafting-Upgrade",
+  "gui.enderio-fabric-light.crafting.limit": "Größter Auftrag: %s Items",
+  "gui.enderio-fabric-light.crafting.info": "Schaltet Autocrafting in allen Terminals dieses Netzes frei.",
+  "gui.enderio-fabric-light.crafting.upgrade.hint": "Crafting-Upgrades (max. %s)"
 }
