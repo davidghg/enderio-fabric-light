@@ -6,6 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import de.daveos.enderiofabriclight.item.CacheBlockItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -67,6 +68,9 @@ public final class ModBlocks {
         true
     );
 
+    /** Cache: 20,000 items of one type. */
+    public static final CacheBlock CACHE = registerCache("cache", 20_000);
+
     public static void init() {
         // Triggers class load -> static fields run -> entries registered.
     }
@@ -87,6 +91,25 @@ public final class ModBlocks {
                 .setId(itemKey));
             Registry.register(BuiltInRegistries.ITEM, itemKey, item);
         }
+        return block;
+    }
+
+    /** Caches get their own item class, which shows the stored contents in its tooltip. */
+    private static CacheBlock registerCache(String name, long capacity) {
+        Identifier id = Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, name);
+        ResourceKey<Block> blockKey = ResourceKey.create(Registries.BLOCK, id);
+        CacheBlock block = new CacheBlock(BlockBehaviour.Properties.of()
+            .strength(3.0f, 6.0f)
+            .sound(SoundType.METAL)
+            .setId(blockKey), capacity);
+        Registry.register(BuiltInRegistries.BLOCK, blockKey, block);
+
+        ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, id);
+        // Stacking would merge or lose contents, so full and empty caches alike stack to 1.
+        Registry.register(BuiltInRegistries.ITEM, itemKey, new CacheBlockItem(block, new Item.Properties()
+            .stacksTo(1)
+            .useBlockDescriptionPrefix()
+            .setId(itemKey)));
         return block;
     }
 }

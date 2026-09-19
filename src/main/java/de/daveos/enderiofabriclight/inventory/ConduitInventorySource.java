@@ -125,6 +125,10 @@ public class ConduitInventorySource implements InventorySource {
         if (!seen.add(n)) return; // already inspected from another node (or a chest's other half)
         if (!level.isLoaded(n)) return;
 
+        if (level.getBlockEntity(n) instanceof StorageUnitProvider provider) {
+            out.add(provider.storageUnit());
+            return;
+        }
         BlockState st = level.getBlockState(n);
         if (!st.is(InventorySource.STORAGE)) return;
         // Inventories used by an import/export panel are that panel's, not network storage.

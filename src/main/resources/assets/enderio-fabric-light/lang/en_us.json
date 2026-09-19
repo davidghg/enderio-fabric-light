@@ -55,5 +55,9 @@
   "gui.enderio-fabric-light.autocraft.needed_count": "Needed: %s",
   "gui.enderio-fabric-light.autocraft.missing_count": "Missing: %s",
   "gui.enderio-fabric-light.autocraft.amount.hint": "Type a number, or scroll (Shift: ±16)",
-  "tooltip.enderio-fabric-light.autocraft": "Click to autocraft"
+  "tooltip.enderio-fabric-light.autocraft": "Click to autocraft",
+  "block.enderio-fabric-light.cache": "Cache",
+  "tooltip.enderio-fabric-light.cache.contents": "Contains %s× %s",
+  "tooltip.enderio-fabric-light.cache.locked": "Locked",
+  "tooltip.enderio-fabric-light.cache.capacity": "Holds up to %s items of one kind"
 }

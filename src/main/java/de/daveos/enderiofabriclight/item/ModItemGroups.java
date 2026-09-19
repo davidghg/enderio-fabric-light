@@ -31,6 +31,7 @@ public final class ModItemGroups {
                     entries.accept(ModBlocks.IMPORT_PANEL);
                     entries.accept(ModBlocks.EXPORT_PANEL);
                     entries.accept(ModBlocks.CRAFTING_PANEL);
+                    entries.accept(ModBlocks.CACHE);
                     entries.accept(ModItems.WRENCH);
                     entries.accept(ModItems.TRANSFER_UPGRADE);
                     entries.accept(ModItems.CRAFTING_UPGRADE);

@@ -1,5 +1,7 @@
 package de.daveos.enderiofabriclight.client;
 
+import de.daveos.enderiofabriclight.blockentity.ModBlockEntities;
+import de.daveos.enderiofabriclight.client.render.CacheRenderer;
 import de.daveos.enderiofabriclight.client.screen.CraftingPanelScreen;
 import de.daveos.enderiofabriclight.client.screen.IoPanelScreen;
 import de.daveos.enderiofabriclight.client.screen.TerminalScreen;
@@ -11,6 +13,7 @@ import de.daveos.enderiofabriclight.network.TerminalUpdatePayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 
 public class EnderIOFabricLightClient implements ClientModInitializer {
 	@Override
@@ -21,6 +24,9 @@ public class EnderIOFabricLightClient implements ClientModInitializer {
 		MenuScreens.register(ModMenus.IMPORT_PANEL, IoPanelScreen::new);
 		MenuScreens.register(ModMenus.EXPORT_PANEL, IoPanelScreen::new);
 		MenuScreens.register(ModMenus.CRAFTING_PANEL, CraftingPanelScreen::new);
+
+		// Draws item, count and fill level onto the cache's front.
+		BlockEntityRenderers.register(ModBlockEntities.CACHE, CacheRenderer::new);
 
 		// Receive aggregated view updates from the server and push them into whichever
 		// terminal menu the player currently has open.

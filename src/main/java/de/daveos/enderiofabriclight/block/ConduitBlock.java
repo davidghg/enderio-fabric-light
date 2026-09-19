@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import de.daveos.enderiofabriclight.blockentity.ConduitBlockEntity;
 import de.daveos.enderiofabriclight.inventory.InventorySource;
 import de.daveos.enderiofabriclight.inventory.NetworkVersion;
+import de.daveos.enderiofabriclight.inventory.StorageUnitProvider;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -162,7 +163,8 @@ public class ConduitBlock extends Block implements EntityBlock {
             return panel instanceof IoPanelBlock ? ConduitConnection.PIPE : ConduitConnection.PLUG;
         }
         BlockEntity be = level.getBlockEntity(neighborPos);
-        return be != null && InventorySource.isAllowedInventory(be) ? ConduitConnection.PLUG : ConduitConnection.NONE;
+        boolean storage = be instanceof StorageUnitProvider || (be != null && InventorySource.isAllowedInventory(be));
+        return storage ? ConduitConnection.PLUG : ConduitConnection.NONE;
     }
 
     /**
