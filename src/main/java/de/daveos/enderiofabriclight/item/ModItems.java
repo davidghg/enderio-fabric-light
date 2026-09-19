@@ -22,6 +22,10 @@ public final class ModItems {
     public static final Item CRAFTING_UPGRADE = register("crafting_upgrade",
         new Item(new Item.Properties().setId(key("crafting_upgrade"))));
 
+    /** Turns a cache into a hardened cache in the crafting grid; the contents carry over. */
+    public static final Item HARDENING_KIT = register("hardening_kit",
+        new Item(new Item.Properties().setId(key("hardening_kit"))));
+
     public static void init() {
         // Triggers class load -> static fields run -> entries registered.
     }

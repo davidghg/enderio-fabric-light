@@ -80,6 +80,8 @@ public final class ModBlocks {
 
     /** Cache: 20,000 items of one type. */
     public static final CacheBlock CACHE = registerCache("cache", 20_000);
+    /** Hardened cache: 80,000 items; made from a cache with a hardening kit, keeping its contents. */
+    public static final CacheBlock HARDENED_CACHE = registerCache("hardened_cache", 80_000);
 
     public static void init() {
         // Triggers class load -> static fields run -> entries registered.

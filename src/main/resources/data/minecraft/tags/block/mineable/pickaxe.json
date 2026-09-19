@@ -7,6 +7,7 @@
     "enderio-fabric-light:export_panel",
     "enderio-fabric-light:crafting_panel",
     "enderio-fabric-light:cache",
-    "enderio-fabric-light:storage_connector"
+    "enderio-fabric-light:storage_connector",
+    "enderio-fabric-light:hardened_cache"
   ]
 }

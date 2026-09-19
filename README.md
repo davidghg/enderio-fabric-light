@@ -111,6 +111,37 @@ Enables autocrafting in every terminal on its network. Like the terminal, it con
 
 With several crafting panels on one network, the best one counts.
 
+### Cache and Hardened Cache
+
+Stores a huge amount of a single item type: **20,000** in a cache, **80,000** in a hardened cache.
+The front shows the item, the count and a fill bar. Only plain items (no enchantments, names or
+other data) fit.
+
+- Right-click with an item: store the held stack. Double right-click: store every matching item
+  from your inventory.
+- Left-click: take a stack. Sneak + left-click: take a single item.
+- Sneak + right-click with an empty hand: settings (priority, lock).
+- **Lock:** a locked cache keeps its item type when it runs empty, so the network refills it.
+- Breaking a cache keeps its contents, lock and priority in the item, like a shulker box.
+- A conduit next to the cache connects it directly. The network only fills caches that already
+  have an item type; it never picks a new type for an empty cache.
+
+**Upgrade** a cache by crafting it with a **Hardening Kit**. Contents and settings carry over.
+
+### Storage Connector
+
+A panel for a chest, barrel or shulker box (or any side of a cache except its display). Dock a
+conduit to its front, like an import panel. Unlike import/export panels, the storage stays ordinary
+network storage. Right-click it to set the priority of the storage behind it; on a cache it opens
+the cache's own settings.
+
+### Priorities
+
+Every storage has a priority from -99 to 99 (chests 0, caches 10 by default; set with the buttons
+or the mouse wheel, Shift = steps of 10). Items go into the highest priority first, filling
+existing stacks before starting new ones. Items are taken from the lowest priority first. So a
+cache for iron blocks gets every iron block before any chest does.
+
 ### Conduit Wrench
 
 - Right-click a conduit arm: switch that connection off or on (splits networks).
@@ -138,6 +169,15 @@ I O I               D W D
 
 D = diamond   Y = eye of ender   B = block of redstone   H = hopper   S = sticky piston
 I = iron ingot   O = conduit   R = redstone   N = netherite scrap   W = crafting table
+
+Cache               Hardening Kit       Storage Connector
+K D K               X D X               D Y D
+B C B               N Y N               B C B
+K D K               X D X               I O I
+
+Hardened Cache = Cache + Hardening Kit (shapeless, keeps contents)
+
+K = block of iron   C = chest   X = obsidian   N = netherite ingot
 ```
 
 ## Upgrading from 1.2.x
@@ -159,6 +199,7 @@ changes — break and replace one conduit per line to refresh them.
 python gen_conduit.py   # regenerate conduit models and textures
 python gen_textures.py  # regenerate terminal and wrench textures
 python gen_panels.py    # regenerate panel and upgrade assets
+python gen_cache.py     # regenerate cache, hardened cache and hardening kit assets
 ```
 
 ## License

@@ -67,5 +67,8 @@
   "gui.enderio-fabric-light.lock.on": "Auf Item gesperrt",
   "gui.enderio-fabric-light.lock.off": "Nicht gesperrt",
   "gui.enderio-fabric-light.lock.hint": "Ein gesperrter Cache behält seine Sorte, auch wenn er leer ist",
-  "gui.enderio-fabric-light.lock.needs_item": "Erst ein Item einlagern, um den Cache darauf zu sperren"
+  "gui.enderio-fabric-light.lock.needs_item": "Erst ein Item einlagern, um den Cache darauf zu sperren",
+  "block.enderio-fabric-light.hardened_cache": "Gehärteter Cache",
+  "item.enderio-fabric-light.hardening_kit": "Härtungs-Kit",
+  "tooltip.enderio-fabric-light.cache.priority": "Priorität %s"
 }

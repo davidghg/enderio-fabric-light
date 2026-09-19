@@ -1,0 +1,43 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_cache": {
+      "conditions": {
+        "items": [
+          {
+            "items": "enderio-fabric-light:cache"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_hardening_kit": {
+      "conditions": {
+        "items": [
+          {
+            "items": "enderio-fabric-light:hardening_kit"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "enderio-fabric-light:hardened_cache"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_cache",
+      "has_hardening_kit"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "enderio-fabric-light:hardened_cache"
+    ]
+  }
+}

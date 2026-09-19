@@ -257,14 +257,18 @@ public class CacheBlockEntity extends BlockEntity implements StorageUnitProvider
     @Override
     protected void collectImplicitComponents(DataComponentMap.Builder components) {
         super.collectImplicitComponents(components);
-        if (hasType()) components.set(ModComponents.CACHE_CONTENTS, new CacheContents(item, count, locked));
+        if (hasType() || priority != DEFAULT_PRIORITY) {
+            components.set(ModComponents.CACHE_CONTENTS, new CacheContents(item, count, locked, priority));
+        }
     }
 
     @Override
     protected void applyImplicitComponents(DataComponentGetter components) {
         super.applyImplicitComponents(components);
         CacheContents contents = components.get(ModComponents.CACHE_CONTENTS);
-        if (contents == null || contents.item() == Items.AIR) return;
+        if (contents == null) return;
+        priority = StorageSettings.clampPriority(contents.priority());
+        if (contents.item() == Items.AIR) return;
         setItem(contents.item());
         count = Math.max(0, contents.count());
         locked = contents.locked();

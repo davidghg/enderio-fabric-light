@@ -48,7 +48,7 @@ public final class ModBlockEntities {
         CACHE = Registry.register(
             BuiltInRegistries.BLOCK_ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "cache"),
-            FabricBlockEntityTypeBuilder.create(CacheBlockEntity::new, ModBlocks.CACHE).build()
+            FabricBlockEntityTypeBuilder.create(CacheBlockEntity::new, ModBlocks.CACHE, ModBlocks.HARDENED_CACHE).build()
         );
         STORAGE_CONNECTOR = Registry.register(
             BuiltInRegistries.BLOCK_ENTITY_TYPE,

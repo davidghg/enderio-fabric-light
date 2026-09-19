@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "enderio-fabric-light:block/hardened_cache_front",
+    "side": "enderio-fabric-light:block/hardened_cache_side",
+    "top": "enderio-fabric-light:block/hardened_cache_top",
+    "particle": "enderio-fabric-light:block/hardened_cache_side"
+  }
+}

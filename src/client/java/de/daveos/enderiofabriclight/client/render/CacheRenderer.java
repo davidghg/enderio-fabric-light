@@ -3,6 +3,7 @@ package de.daveos.enderiofabriclight.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import de.daveos.enderiofabriclight.block.CacheBlock;
+import de.daveos.enderiofabriclight.block.ModBlocks;
 import de.daveos.enderiofabriclight.blockentity.CacheBlockEntity;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -28,7 +29,7 @@ import java.util.Locale;
 
 /**
  * Draws the cache's contents onto the display window of its front: the stored item, the count
- * below it (teal when the cache is locked) and a fill bar that turns red when the cache is full.
+ * below it (in the tier's accent colour when the cache is locked) and a fill bar that turns red when the cache is full.
  *
  * <p>Layout in texture pixels relative to the front's centre (the window spans -5..5).
  */
@@ -46,9 +47,10 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
     private static final float BAR_TOP = -3.9f * PX;
 
     private static final int C_TEXT = 0xFFE0E6EE;
-    private static final int C_TEXT_LOCKED = 0xFF2CB8C0;
+    private static final int C_ACCENT = 0xFF2CB8C0;
+    /** The hardened cache's violet, matching its texture. */
+    private static final int C_ACCENT_HARDENED = 0xFFBA6EFA;
     private static final int C_BAR_BG = 0xFF0E0F12;
-    private static final int C_BAR = 0xFF2CB8C0;
     private static final int C_BAR_FULL = 0xFFE8646A;
 
     /** What one frame needs, copied from the block entity on the render thread's extract pass. */
@@ -62,6 +64,7 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
         FormattedCharSequence countText;
         float fill;
         boolean locked;
+        int accent = C_ACCENT;
     }
 
     private final ItemModelResolver itemModelResolver;
@@ -96,6 +99,7 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
             (int) cache.getBlockPos().asLong());
         state.countText = Component.literal(formatCount(cache.getCount())).getVisualOrderText();
         state.locked = cache.isLocked();
+        state.accent = cache.getBlockState().is(ModBlocks.HARDENED_CACHE) ? C_ACCENT_HARDENED : C_ACCENT;
         long capacity = cache.capacity();
         state.fill = capacity <= 0 ? 0 : Math.min(1f, (float) cache.getCount() / capacity);
     }
@@ -135,13 +139,13 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
         pose.scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
         float x = -font.width(state.countText) / 2f;
         collector.submitText(pose, x, 0, state.countText, false, Font.DisplayMode.POLYGON_OFFSET,
-            state.frontLight, state.locked ? C_TEXT_LOCKED : C_TEXT, 0, 0);
+            state.frontLight, state.locked ? state.accent : C_TEXT, 0, 0);
         pose.popPose();
     }
 
     private void submitBar(State state, PoseStack pose, SubmitNodeCollector collector) {
         float fillRight = BAR_LEFT + (BAR_RIGHT - BAR_LEFT) * state.fill;
-        int fillColor = state.fill >= 1f ? C_BAR_FULL : C_BAR;
+        int fillColor = state.fill >= 1f ? C_BAR_FULL : state.accent;
         int light = state.frontLight;
         collector.submitCustomGeometry(pose, RenderTypes.textBackground(), (p, buffer) -> {
             quad(p, buffer, BAR_LEFT, BAR_BOTTOM, BAR_RIGHT, BAR_TOP, 0.001f, C_BAR_BG, light);

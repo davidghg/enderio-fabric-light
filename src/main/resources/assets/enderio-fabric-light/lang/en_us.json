@@ -67,5 +67,8 @@
   "gui.enderio-fabric-light.lock.on": "Locked to its item",
   "gui.enderio-fabric-light.lock.off": "Not locked",
   "gui.enderio-fabric-light.lock.hint": "A locked cache keeps its item type when it runs empty",
-  "gui.enderio-fabric-light.lock.needs_item": "Store an item first to lock the cache to it"
+  "gui.enderio-fabric-light.lock.needs_item": "Store an item first to lock the cache to it",
+  "block.enderio-fabric-light.hardened_cache": "Hardened Cache",
+  "item.enderio-fabric-light.hardening_kit": "Hardening Kit",
+  "tooltip.enderio-fabric-light.cache.priority": "Priority %s"
 }
