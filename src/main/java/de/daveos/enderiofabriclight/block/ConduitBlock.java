@@ -158,9 +158,9 @@ public class ConduitBlock extends Block implements EntityBlock {
         }
         if (neighborState.getBlock() instanceof PanelBlock panel) {
             if (panel.networkSide(neighborState) != dir.getOpposite()) return ConduitConnection.NONE;
-            // Import/export panels continue the tube through their own block to a socket, so the
+            // Socket panels (import, export, connector) continue the tube through their own block, so the
             // conduit meets them with a pipe sleeve; flush panels (terminal) get the connector plate.
-            return panel instanceof IoPanelBlock ? ConduitConnection.PIPE : ConduitConnection.PLUG;
+            return panel instanceof SocketPanelBlock ? ConduitConnection.PIPE : ConduitConnection.PLUG;
         }
         BlockEntity be = level.getBlockEntity(neighborPos);
         boolean storage = be instanceof StorageUnitProvider || (be != null && InventorySource.isAllowedInventory(be));

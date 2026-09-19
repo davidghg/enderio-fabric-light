@@ -59,5 +59,13 @@
   "block.enderio-fabric-light.cache": "Cache",
   "tooltip.enderio-fabric-light.cache.contents": "Enthält %s× %s",
   "tooltip.enderio-fabric-light.cache.locked": "Gesperrt",
-  "tooltip.enderio-fabric-light.cache.capacity": "Fasst bis zu %s Items einer Sorte"
+  "tooltip.enderio-fabric-light.cache.capacity": "Fasst bis zu %s Items einer Sorte",
+  "block.enderio-fabric-light.storage_connector": "Lager-Connector",
+  "gui.enderio-fabric-light.priority": "Priorität",
+  "gui.enderio-fabric-light.priority.hint": "Höhere Priorität wird zuerst befüllt und zuletzt geleert",
+  "gui.enderio-fabric-light.priority.scroll": "Mausrad: ±1, mit Shift: ±10",
+  "gui.enderio-fabric-light.lock.on": "Auf Item gesperrt",
+  "gui.enderio-fabric-light.lock.off": "Nicht gesperrt",
+  "gui.enderio-fabric-light.lock.hint": "Ein gesperrter Cache behält seine Sorte, auch wenn er leer ist",
+  "gui.enderio-fabric-light.lock.needs_item": "Erst ein Item einlagern, um den Cache darauf zu sperren"
 }

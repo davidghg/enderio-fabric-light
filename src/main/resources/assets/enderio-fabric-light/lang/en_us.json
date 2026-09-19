@@ -59,5 +59,13 @@
   "block.enderio-fabric-light.cache": "Cache",
   "tooltip.enderio-fabric-light.cache.contents": "Contains %s× %s",
   "tooltip.enderio-fabric-light.cache.locked": "Locked",
-  "tooltip.enderio-fabric-light.cache.capacity": "Holds up to %s items of one kind"
+  "tooltip.enderio-fabric-light.cache.capacity": "Holds up to %s items of one kind",
+  "block.enderio-fabric-light.storage_connector": "Storage Connector",
+  "gui.enderio-fabric-light.priority": "Priority",
+  "gui.enderio-fabric-light.priority.hint": "Higher priority is filled first and emptied last",
+  "gui.enderio-fabric-light.priority.scroll": "Mouse wheel: ±1, with Shift: ±10",
+  "gui.enderio-fabric-light.lock.on": "Locked to its item",
+  "gui.enderio-fabric-light.lock.off": "Not locked",
+  "gui.enderio-fabric-light.lock.hint": "A locked cache keeps its item type when it runs empty",
+  "gui.enderio-fabric-light.lock.needs_item": "Store an item first to lock the cache to it"
 }

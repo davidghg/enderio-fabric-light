@@ -4,6 +4,7 @@ import de.daveos.enderiofabriclight.blockentity.ModBlockEntities;
 import de.daveos.enderiofabriclight.client.render.CacheRenderer;
 import de.daveos.enderiofabriclight.client.screen.CraftingPanelScreen;
 import de.daveos.enderiofabriclight.client.screen.IoPanelScreen;
+import de.daveos.enderiofabriclight.client.screen.StorageSettingsScreen;
 import de.daveos.enderiofabriclight.client.screen.TerminalScreen;
 import de.daveos.enderiofabriclight.menu.ModMenus;
 import de.daveos.enderiofabriclight.menu.TerminalMenu;
@@ -24,6 +25,8 @@ public class EnderIOFabricLightClient implements ClientModInitializer {
 		MenuScreens.register(ModMenus.IMPORT_PANEL, IoPanelScreen::new);
 		MenuScreens.register(ModMenus.EXPORT_PANEL, IoPanelScreen::new);
 		MenuScreens.register(ModMenus.CRAFTING_PANEL, CraftingPanelScreen::new);
+		MenuScreens.register(ModMenus.CACHE_SETTINGS, StorageSettingsScreen::new);
+		MenuScreens.register(ModMenus.CONNECTOR_SETTINGS, StorageSettingsScreen::new);
 
 		// Draws item, count and fill level onto the cache's front.
 		BlockEntityRenderers.register(ModBlockEntities.CACHE, CacheRenderer::new);

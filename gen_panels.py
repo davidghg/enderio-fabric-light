@@ -21,6 +21,7 @@ PANELS = {
     # name: (accent lit, accent dim)
     "import_panel": ((92, 224, 120, 255), (38, 110, 58, 255)),
     "export_panel": ((240, 150, 58, 255), (122, 74, 30, 255)),
+    "storage_connector": ((96, 156, 255, 255), (40, 72, 134, 255)),
 }
 
 

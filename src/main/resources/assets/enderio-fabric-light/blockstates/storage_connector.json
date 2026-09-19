@@ -1,0 +1,116 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "connected": "true"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector_tube"
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "connected": "true"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector_tube",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "connected": "true"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector_tube",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "connected": "true"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector_tube",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "connected": "true"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector_tube",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "down"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "connected": "true"
+      },
+      "apply": {
+        "model": "enderio-fabric-light:block/storage_connector_tube",
+        "x": 90
+      }
+    }
+  ]
+}

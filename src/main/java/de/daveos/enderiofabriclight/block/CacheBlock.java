@@ -39,6 +39,7 @@ import java.util.UUID;
  *   <li>right-click with items: store the held stack (an empty cache takes its type from it)</li>
  *   <li>right-click twice quickly: also store every matching stack from the inventory</li>
  *   <li>left-click: take a stack; sneak + left-click: take one</li>
+ *   <li>sneak + right-click with an empty hand: settings (priority, lock)</li>
  * </ul>
  * Broken caches keep their contents on the dropped item.
  */
@@ -114,6 +115,10 @@ public class CacheBlock extends HorizontalDirectionalBlock implements EntityBloc
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CacheBlockEntity cache) player.openMenu(cache);
+            return InteractionResult.SUCCESS;
+        }
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CacheBlockEntity cache
                 && isDoubleClick(level, player) && storeAll(cache, player) > 0) {
             playSound(level, pos, 1.0f);

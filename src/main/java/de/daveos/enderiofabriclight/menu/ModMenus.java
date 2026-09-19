@@ -20,6 +20,8 @@ public final class ModMenus {
     public static MenuType<IoPanelMenu> IMPORT_PANEL;
     public static MenuType<IoPanelMenu> EXPORT_PANEL;
     public static MenuType<CraftingPanelMenu> CRAFTING_PANEL;
+    public static MenuType<StorageSettingsMenu> CACHE_SETTINGS;
+    public static MenuType<StorageSettingsMenu> CONNECTOR_SETTINGS;
 
     public static void init() {
         TERMINAL = Registry.register(
@@ -43,6 +45,18 @@ public final class ModMenus {
             BuiltInRegistries.MENU,
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "crafting_panel"),
             new ExtendedMenuType<>(CraftingPanelMenu::new, BlockPos.STREAM_CODEC)
+        );
+        CACHE_SETTINGS = Registry.register(
+            BuiltInRegistries.MENU,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "cache_settings"),
+            new ExtendedMenuType<StorageSettingsMenu, BlockPos>(
+                (syncId, inv, pos) -> new StorageSettingsMenu(CACHE_SETTINGS, syncId, inv, pos), BlockPos.STREAM_CODEC)
+        );
+        CONNECTOR_SETTINGS = Registry.register(
+            BuiltInRegistries.MENU,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "connector_settings"),
+            new ExtendedMenuType<StorageSettingsMenu, BlockPos>(
+                (syncId, inv, pos) -> new StorageSettingsMenu(CONNECTOR_SETTINGS, syncId, inv, pos), BlockPos.STREAM_CODEC)
         );
     }
 }

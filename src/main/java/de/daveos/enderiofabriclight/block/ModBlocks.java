@@ -68,6 +68,16 @@ public final class ModBlocks {
         true
     );
 
+    public static final Block STORAGE_CONNECTOR = register(
+        "storage_connector",
+        StorageConnectorBlock::new,
+        BlockBehaviour.Properties.of()
+            .strength(3.0f, 6.0f)
+            .sound(SoundType.METAL)
+            .noOcclusion(),
+        true
+    );
+
     /** Cache: 20,000 items of one type. */
     public static final CacheBlock CACHE = registerCache("cache", 20_000);
 

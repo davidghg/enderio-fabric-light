@@ -17,6 +17,7 @@ public final class ModBlockEntities {
     public static BlockEntityType<ExportPanelBlockEntity> EXPORT_PANEL;
     public static BlockEntityType<CraftingPanelBlockEntity> CRAFTING_PANEL;
     public static BlockEntityType<CacheBlockEntity> CACHE;
+    public static BlockEntityType<StorageConnectorBlockEntity> STORAGE_CONNECTOR;
 
     public static void init() {
         TERMINAL = Registry.register(
@@ -48,6 +49,11 @@ public final class ModBlockEntities {
             BuiltInRegistries.BLOCK_ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "cache"),
             FabricBlockEntityTypeBuilder.create(CacheBlockEntity::new, ModBlocks.CACHE).build()
+        );
+        STORAGE_CONNECTOR = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            Identifier.fromNamespaceAndPath(EnderIOFabricLight.MOD_ID, "storage_connector"),
+            FabricBlockEntityTypeBuilder.create(StorageConnectorBlockEntity::new, ModBlocks.STORAGE_CONNECTOR).build()
         );
     }
 }

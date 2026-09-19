@@ -4,6 +4,8 @@ import de.daveos.enderiofabriclight.block.ConduitBlock;
 import de.daveos.enderiofabriclight.block.ConduitConnection;
 import de.daveos.enderiofabriclight.block.ModBlocks;
 import de.daveos.enderiofabriclight.block.PanelBlock;
+import de.daveos.enderiofabriclight.block.StorageConnectorBlock;
+import de.daveos.enderiofabriclight.blockentity.StorageConnectorBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
@@ -79,6 +81,7 @@ public class ConduitInventorySource implements InventorySource {
         // storage. Disabled sides are skipped, which is how the wrench splits networks.
         Set<BlockPos> conduits = new HashSet<>();
         List<BlockPos> plugs = new ArrayList<>();
+        List<BlockPos> connectors = new ArrayList<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
         conduits.add(entry);
         queue.add(entry);
@@ -88,7 +91,11 @@ public class ConduitInventorySource implements InventorySource {
             // and picked up by the panel's periodic rescan once they load.
             if (!level.isLoaded(c)) continue;
             BlockState cs = level.getBlockState(c);
-            if (!cs.is(ModBlocks.CONDUIT)) continue;
+            if (!cs.is(ModBlocks.CONDUIT)) {
+                // Conduits reach socket panels through a pipe joint; connectors lead on to their storage.
+                if (cs.getBlock() instanceof StorageConnectorBlock) connectors.add(c);
+                continue;
+            }
             for (Direction dir : Direction.values()) {
                 ConduitConnection side = cs.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(dir));
                 BlockPos n = c.relative(dir);
@@ -98,6 +105,10 @@ public class ConduitInventorySource implements InventorySource {
                     plugs.add(n);
                 }
             }
+        }
+
+        for (BlockPos c : connectors) {
+            collectAt(level, c.relative(PanelBlock.backSide(level.getBlockState(c))), seen, result);
         }
 
         List<BlockPos> foundPanels = new ArrayList<>();
@@ -149,14 +160,18 @@ public class ConduitInventorySource implements InventorySource {
             }
             Container combined = ChestBlock.getContainer(chestBlock, st, level, n, true);
             if (combined != null && !parts.isEmpty()) {
-                out.add(new ContainerUnit(combined, List.copyOf(parts), StorageUnit.DEFAULT_PRIORITY));
+                int priority = StorageConnectorBlockEntity.priorityFor(level, n);
+                if (parts.size() > 1) {
+                    priority = Math.max(priority, StorageConnectorBlockEntity.priorityFor(level, parts.get(1).getBlockPos()));
+                }
+                out.add(new ContainerUnit(combined, List.copyOf(parts), priority));
             }
             return;
         }
 
         BlockEntity be = level.getBlockEntity(n);
         if (be != null && InventorySource.isAllowedInventory(be)) {
-            out.add(new ContainerUnit((Container) be, List.of(be), StorageUnit.DEFAULT_PRIORITY));
+            out.add(new ContainerUnit((Container) be, List.of(be), StorageConnectorBlockEntity.priorityFor(level, n)));
         }
     }
 

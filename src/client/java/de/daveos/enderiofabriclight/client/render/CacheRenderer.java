@@ -28,7 +28,7 @@ import java.util.Locale;
 
 /**
  * Draws the cache's contents onto the display window of its front: the stored item, the count
- * below it and a fill bar along the bottom that turns red when the cache is full.
+ * below it (teal when the cache is locked) and a fill bar that turns red when the cache is full.
  *
  * <p>Layout in texture pixels relative to the front's centre (the window spans -5..5).
  */
@@ -46,6 +46,7 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
     private static final float BAR_TOP = -3.9f * PX;
 
     private static final int C_TEXT = 0xFFE0E6EE;
+    private static final int C_TEXT_LOCKED = 0xFF2CB8C0;
     private static final int C_BAR_BG = 0xFF0E0F12;
     private static final int C_BAR = 0xFF2CB8C0;
     private static final int C_BAR_FULL = 0xFFE8646A;
@@ -60,6 +61,7 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
         @Nullable
         FormattedCharSequence countText;
         float fill;
+        boolean locked;
     }
 
     private final ItemModelResolver itemModelResolver;
@@ -93,6 +95,7 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
         itemModelResolver.updateForTopItem(state.item, cache.getDisplayStack(), ItemDisplayContext.GUI, level, null,
             (int) cache.getBlockPos().asLong());
         state.countText = Component.literal(formatCount(cache.getCount())).getVisualOrderText();
+        state.locked = cache.isLocked();
         long capacity = cache.capacity();
         state.fill = capacity <= 0 ? 0 : Math.min(1f, (float) cache.getCount() / capacity);
     }
@@ -132,7 +135,7 @@ public class CacheRenderer implements BlockEntityRenderer<CacheBlockEntity, Cach
         pose.scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
         float x = -font.width(state.countText) / 2f;
         collector.submitText(pose, x, 0, state.countText, false, Font.DisplayMode.POLYGON_OFFSET,
-            state.frontLight, C_TEXT, 0, 0);
+            state.frontLight, state.locked ? C_TEXT_LOCKED : C_TEXT, 0, 0);
         pose.popPose();
     }
 

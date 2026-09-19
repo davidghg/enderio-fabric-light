@@ -1,20 +1,30 @@
 package de.daveos.enderiofabriclight.blockentity;
 
 import de.daveos.enderiofabriclight.block.CacheBlock;
+import de.daveos.enderiofabriclight.inventory.NetworkVersion;
 import de.daveos.enderiofabriclight.inventory.StorageUnit;
 import de.daveos.enderiofabriclight.inventory.StorageUnitProvider;
 import de.daveos.enderiofabriclight.item.CacheContents;
 import de.daveos.enderiofabriclight.item.ModComponents;
+import de.daveos.enderiofabriclight.menu.ModMenus;
+import de.daveos.enderiofabriclight.menu.StorageSettingsMenu;
+import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -34,7 +44,8 @@ import java.util.function.ObjLongConsumer;
  * <p>Its "type" is the stored item. An empty cache has no type unless {@link #isLocked() locked};
  * the network only fills caches that have one, so a fresh cache never swallows whatever comes by.
  */
-public class CacheBlockEntity extends BlockEntity implements StorageUnitProvider {
+public class CacheBlockEntity extends BlockEntity implements StorageUnitProvider, StorageSettings,
+        ExtendedMenuProvider<BlockPos> {
     public static final int DEFAULT_PRIORITY = 10;
     /** Minimum ticks between two client updates; a busy import panel may change the count every tick. */
     private static final int SYNC_INTERVAL = 5;
@@ -75,12 +86,41 @@ public class CacheBlockEntity extends BlockEntity implements StorageUnitProvider
         return count;
     }
 
+    @Override
     public boolean isLocked() {
         return locked;
     }
 
+    @Override
+    public boolean hasLock() {
+        return true;
+    }
+
+    /**
+     * Locking keeps the item type when the cache runs empty. It needs a type to lock to; unlocking
+     * an empty cache clears the type.
+     */
+    @Override
+    public void setLocked(boolean value) {
+        if (value == locked || (value && !hasType())) return;
+        locked = value;
+        if (!locked && count == 0) setItem(Items.AIR);
+        contentsChanged();
+    }
+
+    @Override
     public int getPriority() {
         return priority;
+    }
+
+    @Override
+    public void setPriority(int value) {
+        int clamped = StorageSettings.clampPriority(value);
+        if (clamped == priority) return;
+        priority = clamped;
+        setChanged();
+        // The network sorts storage by priority when it scans, so it has to scan again.
+        NetworkVersion.bump();
     }
 
     /** One-item stack of the stored item for display; empty without a type. Must not be modified. */
@@ -209,7 +249,7 @@ public class CacheBlockEntity extends BlockEntity implements StorageUnitProvider
         setItem(id == null ? Items.AIR : BuiltInRegistries.ITEM.getOptional(id).orElse(Items.AIR));
         count = hasType() ? Math.max(0, input.getLongOr(TAG_COUNT, 0)) : 0;
         locked = hasType() && input.getBooleanOr(TAG_LOCKED, false);
-        priority = input.getIntOr(TAG_PRIORITY, DEFAULT_PRIORITY);
+        priority = StorageSettings.clampPriority(input.getIntOr(TAG_PRIORITY, DEFAULT_PRIORITY));
     }
 
     // The contents live in a data component on the item, so breaking and placing keeps them.
@@ -228,6 +268,24 @@ public class CacheBlockEntity extends BlockEntity implements StorageUnitProvider
         setItem(contents.item());
         count = Math.max(0, contents.count());
         locked = contents.locked();
+    }
+
+    // --- Menu ---------------------------------------------------------------
+
+    @Override
+    public Component getDisplayName() {
+        return getBlockState().getBlock().getName();
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int syncId, Inventory playerInv, Player player) {
+        return new StorageSettingsMenu(ModMenus.CACHE_SETTINGS, syncId, playerInv, this,
+            ContainerLevelAccess.create(level, worldPosition), getBlockState().getBlock());
+    }
+
+    @Override
+    public BlockPos getScreenOpeningData(ServerPlayer player) {
+        return worldPosition;
     }
 
     @Override
