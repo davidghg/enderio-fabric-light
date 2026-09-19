@@ -21,13 +21,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.ObjLongConsumer;
 
 /**
  * Abstraction over "where does a panel get its accessible inventories from".
  *
  * <p>Panels never need to know which implementation is active, so the source of the inventory list
- * can change (radius scan in M1, conduit network in M2) without touching them. Moving items in and
- * out goes through {@link #insert} and {@link #extract}, shared by every panel type.
+ * can change (radius scan in M1, conduit network in M2) without touching them. Storage is a list of
+ * {@link StorageUnit}s; moving items in and out goes through {@link #insert} and {@link #extract},
+ * shared by every panel type.
  */
 public interface InventorySource {
     /** Blocks panels may use as storage. Data-driven: data/enderio-fabric-light/tags/block/terminal_storage.json */
@@ -40,10 +42,14 @@ public interface InventorySource {
     void update(Level level, BlockPos panelPos);
 
     /**
-     * Snapshot of currently accessible inventories. May be empty. Implementations should return
-     * an unmodifiable view.
+     * Currently usable storage, highest {@link StorageUnit#priority() priority} first. Units that
+     * went stale since the last scan are left out. May be empty.
      */
-    List<Container> getInventories();
+    List<StorageUnit> getUnits();
+
+    default boolean hasStorage() {
+        return !getUnits().isEmpty();
+    }
 
     /**
      * Positions of the other panels on the same network, as of the last {@link #update}. Callers
@@ -84,74 +90,104 @@ public interface InventorySource {
     }
 
     /**
-     * Aggregated view across all accessible inventories: one {@link ItemStack} per distinct
-     * (item + components) pair, with {@code getCount()} holding the summed total across every
-     * container. Counts may exceed {@code maxStackSize} — this is a virtual stack for display
-     * purposes, never inserted back into a real slot.
-     *
-     * <p>The default implementation walks every container's slot list. Implementations can
-     * override for a faster path if they already maintain an aggregated cache.
+     * Aggregated view across all storage: one {@link ItemStack} per distinct (item + components)
+     * pair, with {@code getCount()} holding the summed total. Counts may exceed {@code maxStackSize}
+     * — this is a virtual stack for display purposes, never inserted back into a real slot.
      */
     default List<ItemStack> getAggregatedStacks() {
-        // Hash map keyed by item+components: O(slots) instead of O(slots × distinct items).
-        // LinkedHashMap keeps discovery order stable, so unchanged inventories compare equal.
-        Map<StackKey, ItemStack> merged = new LinkedHashMap<>();
-        for (Container container : getInventories()) {
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                ItemStack stack = container.getItem(slot);
-                if (stack.isEmpty()) continue;
-                ItemStack existing = merged.get(new StackKey(stack));
-                if (existing == null) {
+        // Hash map keyed by item+components: O(stacks) instead of O(stacks × distinct items).
+        // LinkedHashMap keeps discovery order stable, so unchanged storage compares equal.
+        Map<StackKey, long[]> totals = new LinkedHashMap<>();
+        Map<StackKey, ItemStack> templates = new LinkedHashMap<>();
+        for (StorageUnit unit : getUnits()) {
+            unit.forEachStack((stack, count) -> {
+                StackKey key = new StackKey(stack);
+                long[] total = totals.get(key);
+                if (total == null) {
                     // Copy so the aggregate never aliases a real slot.
-                    ItemStack copy = stack.copy();
-                    merged.put(new StackKey(copy), copy);
+                    ItemStack copy = stack.copyWithCount(1);
+                    StackKey copyKey = new StackKey(copy);
+                    totals.put(copyKey, new long[] {count});
+                    templates.put(copyKey, copy);
                 } else {
-                    existing.setCount(existing.getCount() + stack.getCount());
+                    total[0] += count;
                 }
-            }
+            });
         }
-        return new ArrayList<>(merged.values());
-    }
-
-    /** Inserts into the network's storage; mutates and returns the stack as the part that didn't fit. */
-    default ItemStack insert(ItemStack stack) {
-        return insertInto(getInventories(), stack);
+        List<ItemStack> result = new ArrayList<>(templates.size());
+        templates.forEach((key, stack) -> {
+            stack.setCount((int) Math.min(Integer.MAX_VALUE, totals.get(key)[0]));
+            result.add(stack);
+        });
+        return result;
     }
 
     /**
-     * Hopper-style insertion: try to merge into existing matching stacks first (across all
-     * containers), then fill empty slots. Mutates the input stack and returns whatever didn't fit.
+     * Inserts into the network's storage, highest priority first. Within one priority it tops up
+     * existing stacks before starting new ones. Mutates and returns the part that didn't fit.
+     */
+    default ItemStack insert(ItemStack stack) {
+        List<StorageUnit> units = getUnits(); // sorted by priority, highest first
+        int groupStart = 0;
+        while (groupStart < units.size() && !stack.isEmpty()) {
+            int priority = units.get(groupStart).priority();
+            int groupEnd = groupStart;
+            while (groupEnd < units.size() && units.get(groupEnd).priority() == priority) groupEnd++;
+            for (StorageUnit.Pass pass : StorageUnit.Pass.values()) {
+                for (int i = groupStart; i < groupEnd && !stack.isEmpty(); i++) {
+                    stack = units.get(i).insert(stack, pass);
+                }
+            }
+            groupStart = groupEnd;
+        }
+        return stack;
+    }
+
+    /** Calls {@code visitor} for every stored stack across all units (see {@link StorageUnit#forEachStack}). */
+    default void forEachStack(ObjLongConsumer<ItemStack> visitor) {
+        for (StorageUnit unit : getUnits()) unit.forEachStack(visitor);
+    }
+
+    /**
+     * Hopper-style insertion into plain containers: tops up existing matching stacks first (across
+     * all of them), then fills empty slots. Mutates the input stack and returns whatever didn't fit.
      */
     static ItemStack insertInto(List<Container> targets, ItemStack stack) {
-        // Pass 1: merge with existing matching stacks.
-        for (Container target : targets) {
-            for (int s = 0; s < target.getContainerSize(); s++) {
-                if (stack.isEmpty()) return stack;
-                ItemStack existing = target.getItem(s);
-                if (existing.isEmpty()) continue;
-                if (!ItemStack.isSameItemSameComponents(existing, stack)) continue;
-                if (!canInsert(target, s, stack)) continue;
-                int cap = Math.min(existing.getMaxStackSize(), target.getMaxStackSize());
-                int room = cap - existing.getCount();
-                if (room <= 0) continue;
-                int move = Math.min(room, stack.getCount());
-                existing.grow(move);
-                stack.shrink(move);
-                target.setChanged();
-            }
+        for (Container target : targets) stack = mergeInto(target, stack);
+        for (Container target : targets) stack = fillInto(target, stack);
+        return stack;
+    }
+
+    /** Adds to stacks in {@code target} that already hold the same item; mutates and returns the rest. */
+    static ItemStack mergeInto(Container target, ItemStack stack) {
+        for (int s = 0; s < target.getContainerSize(); s++) {
+            if (stack.isEmpty()) return stack;
+            ItemStack existing = target.getItem(s);
+            if (existing.isEmpty()) continue;
+            if (!ItemStack.isSameItemSameComponents(existing, stack)) continue;
+            if (!canInsert(target, s, stack)) continue;
+            int cap = Math.min(existing.getMaxStackSize(), target.getMaxStackSize());
+            int room = cap - existing.getCount();
+            if (room <= 0) continue;
+            int move = Math.min(room, stack.getCount());
+            existing.grow(move);
+            stack.shrink(move);
+            target.setChanged();
         }
-        // Pass 2: fill empty slots.
-        for (Container target : targets) {
-            for (int s = 0; s < target.getContainerSize(); s++) {
-                if (stack.isEmpty()) return stack;
-                if (!target.getItem(s).isEmpty()) continue;
-                if (!canInsert(target, s, stack)) continue;
-                int cap = Math.min(stack.getMaxStackSize(), target.getMaxStackSize());
-                int move = Math.min(cap, stack.getCount());
-                target.setItem(s, stack.copyWithCount(move));
-                stack.shrink(move);
-                target.setChanged();
-            }
+        return stack;
+    }
+
+    /** Puts {@code stack} into empty slots of {@code target}; mutates and returns the rest. */
+    static ItemStack fillInto(Container target, ItemStack stack) {
+        for (int s = 0; s < target.getContainerSize(); s++) {
+            if (stack.isEmpty()) return stack;
+            if (!target.getItem(s).isEmpty()) continue;
+            if (!canInsert(target, s, stack)) continue;
+            int cap = Math.min(stack.getMaxStackSize(), target.getMaxStackSize());
+            int move = Math.min(cap, stack.getCount());
+            target.setItem(s, stack.copyWithCount(move));
+            stack.shrink(move);
+            target.setChanged();
         }
         return stack;
     }
@@ -188,19 +224,15 @@ public interface InventorySource {
         return space;
     }
 
-    /** Removes up to {@code amount} items matching {@code template} and returns them. */
+    /**
+     * Removes up to {@code amount} items matching {@code template} and returns them. Takes from the
+     * lowest priority first, so preferred storage (caches) keeps its stock longest.
+     */
     default ItemStack extract(ItemStack template, int amount) {
+        List<StorageUnit> units = getUnits();
         int taken = 0;
-        for (Container container : getInventories()) {
-            for (int slot = 0; slot < container.getContainerSize() && taken < amount; slot++) {
-                ItemStack inSlot = container.getItem(slot);
-                if (inSlot.isEmpty() || !ItemStack.isSameItemSameComponents(inSlot, template)) continue;
-                int take = Math.min(amount - taken, inSlot.getCount());
-                inSlot.shrink(take);
-                container.setChanged();
-                taken += take;
-            }
-            if (taken >= amount) break;
+        for (int i = units.size() - 1; i >= 0 && taken < amount; i--) {
+            taken += units.get(i).extract(template, amount - taken);
         }
         return taken == 0 ? ItemStack.EMPTY : template.copyWithCount(taken);
     }

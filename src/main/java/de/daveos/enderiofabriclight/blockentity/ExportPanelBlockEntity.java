@@ -73,13 +73,11 @@ public class ExportPanelBlockEntity extends IoPanelBlockEntity {
 
     /** A single-item template of the first stack in the network with this item, or empty. */
     private static ItemStack findInNetwork(InventorySource storage, Item item) {
-        for (Container container : storage.getInventories()) {
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                ItemStack stack = container.getItem(slot);
-                if (!stack.isEmpty() && stack.is(item)) return stack.copyWithCount(1);
-            }
-        }
-        return ItemStack.EMPTY;
+        ItemStack[] found = {ItemStack.EMPTY};
+        storage.forEachStack((stack, count) -> {
+            if (found[0].isEmpty() && stack.is(item)) found[0] = stack.copyWithCount(1);
+        });
+        return found[0];
     }
 
     private static int countIn(Container container, Item item) {

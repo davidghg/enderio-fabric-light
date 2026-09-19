@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
@@ -35,17 +36,8 @@ public class ConduitInventorySource implements InventorySource {
     /** Safety cap on traversed conduits, so a pathological network can't stall the server tick. */
     private static final int MAX_NODES = 2048;
 
-    /** A reachable container plus the block entities backing it (two for a double chest). */
-    private record Entry(Container container, List<BlockEntity> parts) {
-        boolean isValid() {
-            for (BlockEntity be : parts) {
-                if (be.isRemoved()) return false;
-            }
-            return true;
-        }
-    }
-
-    private List<Entry> cached = List.of();
+    /** Reachable storage, highest priority first. */
+    private List<StorageUnit> cached = List.of();
     /** Other panels docked to the same network (e.g. a crafting panel), by position. */
     private List<BlockPos> panels = List.of();
 
@@ -61,7 +53,7 @@ public class ConduitInventorySource implements InventorySource {
         Direction networkSide = panel.networkSide(panelState);
         BlockPos entry = panelPos.relative(networkSide);
 
-        List<Entry> result = new ArrayList<>();
+        List<StorageUnit> result = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
         seen.add(panelPos);
 
@@ -72,7 +64,7 @@ public class ConduitInventorySource implements InventorySource {
         BlockState entryState = level.getBlockState(entry);
         if (!entryState.is(ModBlocks.CONDUIT)) {
             collectAt(level, entry, seen, result);
-            cached = List.copyOf(result);
+            cached = sorted(result);
             return;
         }
         // The conduit's side toward the panel may have been switched off with the wrench.
@@ -118,12 +110,18 @@ public class ConduitInventorySource implements InventorySource {
             }
         }
 
-        cached = List.copyOf(result);
+        cached = sorted(result);
         panels = List.copyOf(foundPanels);
     }
 
+    /** Highest priority first; stable, so equal priorities keep discovery order. */
+    private static List<StorageUnit> sorted(List<StorageUnit> units) {
+        units.sort(Comparator.comparingInt(StorageUnit::priority).reversed());
+        return List.copyOf(units);
+    }
+
     /** Adds the storage block at {@code n} (if any) to {@code out}. */
-    private static void collectAt(Level level, BlockPos n, Set<BlockPos> seen, List<Entry> out) {
+    private static void collectAt(Level level, BlockPos n, Set<BlockPos> seen, List<StorageUnit> out) {
         if (!seen.add(n)) return; // already inspected from another node (or a chest's other half)
         if (!level.isLoaded(n)) return;
 
@@ -146,13 +144,15 @@ public class ConduitInventorySource implements InventorySource {
                 if (level.getBlockEntity(other) instanceof BlockEntity otherBe) parts.add(otherBe);
             }
             Container combined = ChestBlock.getContainer(chestBlock, st, level, n, true);
-            if (combined != null && !parts.isEmpty()) out.add(new Entry(combined, List.copyOf(parts)));
+            if (combined != null && !parts.isEmpty()) {
+                out.add(new ContainerUnit(combined, List.copyOf(parts), StorageUnit.DEFAULT_PRIORITY));
+            }
             return;
         }
 
         BlockEntity be = level.getBlockEntity(n);
         if (be != null && InventorySource.isAllowedInventory(be)) {
-            out.add(new Entry((Container) be, List.of(be)));
+            out.add(new ContainerUnit((Container) be, List.of(be), StorageUnit.DEFAULT_PRIORITY));
         }
     }
 
@@ -163,8 +163,8 @@ public class ConduitInventorySource implements InventorySource {
      */
     @Override
     public boolean isStale() {
-        for (Entry e : cached) {
-            if (!e.isValid()) return true;
+        for (StorageUnit unit : cached) {
+            if (!unit.isValid()) return true;
         }
         return false;
     }
@@ -175,11 +175,16 @@ public class ConduitInventorySource implements InventorySource {
     }
 
     @Override
-    public List<Container> getInventories() {
-        List<Container> result = new ArrayList<>(cached.size());
-        for (Entry e : cached) {
-            if (e.isValid()) result.add(e.container());
+    public List<StorageUnit> getUnits() {
+        for (StorageUnit unit : cached) {
+            if (!unit.isValid()) {
+                List<StorageUnit> valid = new ArrayList<>(cached.size());
+                for (StorageUnit u : cached) {
+                    if (u.isValid()) valid.add(u);
+                }
+                return valid;
+            }
         }
-        return result;
+        return cached;
     }
 }

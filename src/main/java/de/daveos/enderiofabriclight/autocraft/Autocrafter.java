@@ -100,7 +100,7 @@ public final class Autocrafter {
 
     private static CraftingPlan plan(ServerLevel level, InventorySource network, Item target, int amount) {
         return CraftingPlanner.plan(RecipeIndex.get(level.getServer()),
-            CraftingPlanner.plainStock(network.getInventories()), target, amount);
+            CraftingPlanner.plainStock(network), target, amount);
     }
 
     /**

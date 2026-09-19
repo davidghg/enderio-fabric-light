@@ -60,7 +60,7 @@ public class TerminalBlockEntity extends BlockEntity implements ExtendedMenuProv
     }
 
     private void drainReturnArea() {
-        if (returnArea.isEmpty() || network.source().getInventories().isEmpty()) return;
+        if (returnArea.isEmpty() || !network.source().hasStorage()) return;
 
         for (int slot = 0; slot < returnArea.getContainerSize(); slot++) {
             ItemStack stack = returnArea.getItem(slot);

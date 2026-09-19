@@ -1,6 +1,6 @@
 package de.daveos.enderiofabriclight.autocraft;
 
-import net.minecraft.world.Container;
+import de.daveos.enderiofabriclight.inventory.InventorySource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -76,19 +76,14 @@ public final class CraftingPlanner {
     }
 
     /**
-     * Counts the plain items in {@code containers}. Stacks with components (damaged, enchanted,
+     * Counts the plain items in {@code storage}. Stacks with components (damaged, enchanted,
      * renamed, filled shulker boxes...) are left out, so autocrafting never uses them up.
      */
-    public static Map<Item, Long> plainStock(List<Container> containers) {
+    public static Map<Item, Long> plainStock(InventorySource storage) {
         Map<Item, Long> stock = new HashMap<>();
-        for (Container container : containers) {
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                ItemStack stack = container.getItem(slot);
-                if (!stack.isEmpty() && stack.getComponentsPatch().isEmpty()) {
-                    stock.merge(stack.getItem(), (long) stack.getCount(), Long::sum);
-                }
-            }
-        }
+        storage.forEachStack((stack, count) -> {
+            if (stack.getComponentsPatch().isEmpty()) stock.merge(stack.getItem(), count, Long::sum);
+        });
         return stock;
     }
 

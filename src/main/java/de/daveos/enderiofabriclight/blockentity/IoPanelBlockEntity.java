@@ -126,7 +126,7 @@ public abstract class IoPanelBlockEntity extends BlockEntity implements Extended
         Container mounted = InventorySource.containerAt(level, pos.relative(PanelBlock.backSide(state)));
         if (mounted == null) return;
         InventorySource storage = network.source();
-        if (storage.getInventories().isEmpty()) return;
+        if (!storage.hasStorage()) return;
 
         transfer(mounted, storage, TransferRate.amount(installed));
     }
