@@ -77,7 +77,8 @@ public class ConduitInventorySource implements InventorySource {
         }
         // The conduit's side toward the panel may have been switched off with the wrench.
         Direction towardPanel = networkSide.getOpposite();
-        if (entryState.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(towardPanel)) != ConduitConnection.PLUG) {
+        // PIPE toward import/export panels, PLUG toward flush panels; see ConduitBlock#connectionTo.
+        if (!entryState.getValue(ConduitBlock.PROPERTY_BY_DIRECTION.get(towardPanel)).isConnected()) {
             cached = List.of();
             return;
         }

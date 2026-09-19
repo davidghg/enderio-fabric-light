@@ -48,13 +48,14 @@ public class ConduitBlock extends Block implements EntityBlock {
         Direction.NORTH, NORTH, Direction.EAST, EAST, Direction.SOUTH, SOUTH,
         Direction.WEST, WEST, Direction.UP, UP, Direction.DOWN, DOWN));
 
-    private static final VoxelShape CORE = Block.box(5, 5, 5, 11, 11, 11);
+    private static final VoxelShape CORE = Block.box(6, 6, 6, 10, 10, 10);
     private static final Map<Direction, VoxelShape> ARM = new EnumMap<>(Direction.class);
     private static final Map<Direction, VoxelShape> PLATE = new EnumMap<>(Direction.class);
     static {
         for (Direction dir : Direction.values()) {
+            // Arms are as wide as the hub rather than the 2px tube, so they stay easy to click.
             ARM.put(dir, towards(dir, 6, 10, 0, 6));
-            PLATE.put(dir, towards(dir, 4, 12, 0, 1));
+            PLATE.put(dir, towards(dir, 5, 11, 0, 1));
         }
     }
 
@@ -155,7 +156,10 @@ public class ConduitBlock extends Block implements EntityBlock {
                 ? ConduitConnection.NONE : ConduitConnection.PIPE;
         }
         if (neighborState.getBlock() instanceof PanelBlock panel) {
-            return panel.networkSide(neighborState) == dir.getOpposite() ? ConduitConnection.PLUG : ConduitConnection.NONE;
+            if (panel.networkSide(neighborState) != dir.getOpposite()) return ConduitConnection.NONE;
+            // Import/export panels continue the tube through their own block to a socket, so the
+            // conduit meets them with a pipe sleeve; flush panels (terminal) get the connector plate.
+            return panel instanceof IoPanelBlock ? ConduitConnection.PIPE : ConduitConnection.PLUG;
         }
         BlockEntity be = level.getBlockEntity(neighborPos);
         return be != null && InventorySource.isAllowedInventory(be) ? ConduitConnection.PLUG : ConduitConnection.NONE;

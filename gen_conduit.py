@@ -1,6 +1,7 @@
 """Generates the conduit's textures, block models, blockstate and item model.
 
-Design: a thin translucent glass tube (4px) around a softly glowing core (2px). Bends, junctions
+Design: a slim translucent glass tube (2px) around a softly glowing core (1px), in the spirit of
+Ender IO's conduits. Bends, junctions
 and ends get a bevelled graphite hub; pipe-to-pipe joints a slim bevelled sleeve; storage and
 terminal connections a rounded flange with a glowing ring hugging the tube.
 
@@ -22,14 +23,14 @@ TEX = os.path.join(ROOT, "textures", "block")
 MODELS = os.path.join(ROOT, "models")
 
 # Dimensions in pixels.
-GLASS = (6, 10)          # tube cross-section
-ENERGY = (7, 9)          # glowing core cross-section
-HUB = (5, 11)            # junction hub
+GLASS = (7, 9)           # tube cross-section; integers, the glass texture's sheen rows use them
+ENERGY = (7.5, 8.5)      # glowing core cross-section
+HUB = (6, 10)            # junction hub
 HUB_BEVEL = 0.5
-SLEEVE = (5.5, 10.5)     # pipe-to-pipe sleeve cross-section
+SLEEVE = (6.5, 9.5)      # pipe-to-pipe sleeve cross-section
 SLEEVE_DEPTH = 0.75      # per block; two neighbours form a 1.5px sleeve
 SLEEVE_BEVEL = 0.5
-FLANGE = (4, 12)         # connector flange cross-section
+FLANGE = (5, 11)         # connector flange cross-section
 FLANGE_DEPTH = 1
 FLANGE_BEVEL = 1
 GLOW_OFFSET = 0.1        # glow ring sits this far in front of the flange face

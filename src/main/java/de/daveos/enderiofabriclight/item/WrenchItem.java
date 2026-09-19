@@ -20,8 +20,8 @@ import net.minecraft.world.phys.Vec3;
  * pick up a conduit or panel.
  */
 public class WrenchItem extends Item {
-    /** Click offsets beyond the conduit core (half of the 6px hub) count as hitting an arm. */
-    private static final double CORE_HALF = 3.0 / 16.0;
+    /** Click offsets beyond the conduit core (half of the 4px hub) count as hitting an arm. */
+    private static final double CORE_HALF = 2.0 / 16.0;
 
     public WrenchItem(Properties properties) {
         super(properties);

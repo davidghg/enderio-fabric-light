@@ -186,10 +186,13 @@ def socket_elements():
 
 
 def tube_elements():
+    """Tube from the socket to the block edge, ending in a sleeve like a conduit-to-conduit joint
+    (the conduit meets import/export panels with a pipe connection, not a connector plate)."""
     reach = SOCKET_FACE - SOCKET_DEPTH
     return [
         gc.tube("north", gc.GLASS, reach, "#glass"),
         gc.tube("north", gc.ENERGY, reach, "#energy", emission=15),
+        *gc.sleeve("north"),
     ]
 
 
@@ -202,7 +205,7 @@ def models(name):
         "particle": f"{NS}:block/terminal_side",
     }
     write_model(f"block/{name}", base_textures, [panel_element(), *socket_elements()])
-    tube_textures = {k: gc.TEXTURES[k] for k in ("glass", "energy", "particle")}
+    tube_textures = {k: gc.TEXTURES[k] for k in ("glass", "energy", "frame", "particle")}
     write_model(f"block/{name}_tube", tube_textures, tube_elements())
 
 
