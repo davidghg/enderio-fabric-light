@@ -140,6 +140,12 @@ D = diamond   Y = eye of ender   B = block of redstone   H = hopper   S = sticky
 I = iron ingot   O = conduit   R = redstone   N = netherite scrap   W = crafting table
 ```
 
+## Upgrading from 1.2.x
+
+Conduits are thinner, and they now meet import and export panels with a pipe joint instead of a
+connector plate. Conduits placed next to such a panel before 1.3.0 keep showing the plate until a
+neighbouring block changes — toggle that side off and on with the wrench to refresh it.
+
 ## Upgrading from 1.0.x
 
 Conduit block states changed. Existing conduits show no connections until a neighbouring block
