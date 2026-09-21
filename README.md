@@ -180,6 +180,19 @@ Hardened Cache = Cache + Hardening Kit (shapeless, keeps contents)
 K = block of iron   C = chest   X = obsidian   N = netherite ingot
 ```
 
+## Changing the recipes
+
+`datapack/enderio-fabric-light-recipes/` is a datapack holding an editable copy of every recipe in
+this mod. Copy that folder into `<world>/datapacks/` (single player or server), run `/reload`, and
+your versions replace the built-in ones — no new build needed.
+
+- Edit a file under `data/enderio-fabric-light/recipe/` to change what a block costs.
+- Delete a file to fall back to the mod's default.
+- To remove a recipe completely, list it (and its recipe-book advancement) in the `filter` block of
+  `pack.mcmeta`.
+
+`README.txt` inside the pack repeats this, and `python gen_datapack.py` regenerates the copies.
+
 ## Upgrading from 1.2.x
 
 Conduits are thinner, and they now meet import and export panels with a pipe joint instead of a
@@ -200,6 +213,7 @@ python gen_conduit.py   # regenerate conduit models and textures
 python gen_textures.py  # regenerate terminal and wrench textures
 python gen_panels.py    # regenerate panel and upgrade assets
 python gen_cache.py     # regenerate cache, hardened cache and hardening kit assets
+python gen_datapack.py  # regenerate the editable recipe datapack
 ```
 
 ## License

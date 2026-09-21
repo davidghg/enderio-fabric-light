@@ -1,0 +1,9 @@
+{
+  "pack": {
+    "pack_format": 101,
+    "description": "Editable copies of the EnderIO Fabric light recipes"
+  },
+  "filter": {
+    "block": []
+  }
+}
