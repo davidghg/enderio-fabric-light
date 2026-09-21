@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:glass"
+  },
+  "pattern": [
+    "IGI"
+  ],
+  "result": {
+    "id": "enderio-fabric-light:conduit",
+    "count": 6
+  }
+}

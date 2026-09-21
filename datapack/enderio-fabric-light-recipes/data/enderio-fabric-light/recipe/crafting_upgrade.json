@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "D": "minecraft:diamond",
+    "R": "minecraft:redstone",
+    "N": "minecraft:netherite_scrap",
+    "W": "minecraft:crafting_table"
+  },
+  "pattern": [
+    "DRD",
+    "RNR",
+    "DWD"
+  ],
+  "result": {
+    "id": "enderio-fabric-light:crafting_upgrade"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "D": "minecraft:diamond",
+    "R": "minecraft:redstone",
+    "N": "minecraft:netherite_scrap"
+  },
+  "pattern": [
+    "DRD",
+    "RNR",
+    "DRD"
+  ],
+  "result": {
+    "id": "enderio-fabric-light:transfer_upgrade"
+  }
+}

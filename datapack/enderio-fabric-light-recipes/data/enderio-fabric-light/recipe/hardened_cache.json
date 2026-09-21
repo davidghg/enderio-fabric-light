@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "redstone",
+  "input": "enderio-fabric-light:cache",
+  "material": "enderio-fabric-light:hardening_kit",
+  "result": {
+    "id": "enderio-fabric-light:hardened_cache"
+  }
+}
